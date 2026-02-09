@@ -1,0 +1,257 @@
+{
+  "name": "02 - Gemini Chat",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT user_message, ai_response, timestamp FROM conversations WHERE user_id = $1 ORDER BY timestamp DESC LIMIT 5",
+        "additionalFields": {
+          "parameters": [
+            {
+              "name": "user_id",
+              "value": "={{ $json.userId }}"
+            }
+          ]
+        }
+      },
+      "name": "Get Conversation History",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.2,
+      "position": [450, 200],
+      "credentials": {
+        "postgres": {
+          "id": "sqlite-credentials",
+          "name": "ronku-bot-db"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT fact, category FROM memory WHERE user_id = $1 ORDER BY timestamp DESC",
+        "additionalFields": {
+          "parameters": [
+            {
+              "name": "user_id",
+              "value": "={{ $json.userId }}"
+            }
+          ]
+        }
+      },
+      "name": "Get User Memory",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.2,
+      "position": [450, 400],
+      "credentials": {
+        "postgres": {
+          "id": "sqlite-credentials",
+          "name": "ronku-bot-db"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build the AI prompt with personality and context\nconst userMessage = $input.first().json.text;\nconst username = $input.first().json.username;\n\n// System prompt with warm, conversational personality\nconst systemPrompt = `You are ronku_bot, a warm and conversational AI assistant running on @ronkuwonku's Mac.\n\nYour personality: Friendly, helpful, conversational. Use a warm, casual tone like chatting with a friend. Be concise but personable.\n\nYou have access to the user's Mac and can help with:\n- Answering questions\n- Running safe system commands\n- Remembering facts\n- Reading files\n- Having friendly conversations\n\nCurrent time: ${new Date().toLocaleString()}\nUser: @${username}`;\n\n// Get conversation history (if available)\nlet historyText = '';\nconst historyItems = $('Get Conversation History').all();\nif (historyItems && historyItems.length > 0) {\n  historyText = '\\n\\nRecent conversation history:\\n';\n  historyItems.reverse().forEach(item => {\n    historyText += `User: ${item.json.user_message}\\nAssistant: ${item.json.ai_response}\\n\\n`;\n  });\n}\n\n// Get user memory (if available)\nlet memoryText = '';\nconst memoryItems = $('Get User Memory').all();\nif (memoryItems && memoryItems.length > 0) {\n  memoryText = '\\n\\nThings I remember about you:\\n';\n  memoryItems.forEach(item => {\n    memoryText += `- ${item.json.fact}\\n`;\n  });\n}\n\n// Build full prompt\nconst fullPrompt = `${systemPrompt}${memoryText}${historyText}\\n\\nUser message: ${userMessage}\\n\\nRespond warmly and helpfully:`;\n\nreturn [{\n  json: {\n    prompt: fullPrompt,\n    userMessage: userMessage,\n    chatId: $input.first().json.chatId,\n    userId: $input.first().json.userId\n  }\n}];"
+      },
+      "name": "Build AI Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "name": "Wait for DB Queries",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [550, 300]
+    },
+    {
+      "parameters": {
+        "model": "gemini-3-flash",
+        "options": {
+          "temperature": 0.7,
+          "maxOutputTokens": 800
+        }
+      },
+      "name": "Gemini AI",
+      "type": "n8n-nodes-base.googlePaLmChatModel",
+      "typeVersion": 1,
+      "position": [850, 300],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "gemini-credentials",
+          "name": "Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "name": "AI Agent",
+      "type": "n8n-nodes-base.agent",
+      "typeVersion": 1.1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversations (user_id, username, user_message, ai_response, timestamp) VALUES ($1, $2, $3, $4, datetime('now'))",
+        "additionalFields": {
+          "parameters": [
+            {
+              "name": "user_id",
+              "value": "={{ $json.userId }}"
+            },
+            {
+              "name": "username",
+              "value": "={{ $json.username }}"
+            },
+            {
+              "name": "user_message",
+              "value": "={{ $json.userMessage }}"
+            },
+            {
+              "name": "ai_response",
+              "value": "={{ $json.response }}"
+            }
+          ]
+        }
+      },
+      "name": "Save Conversation",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.2,
+      "position": [1050, 300],
+      "credentials": {
+        "postgres": {
+          "id": "sqlite-credentials",
+          "name": "ronku-bot-db"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.response }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Send Telegram Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [1250, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "ronku_bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Conversation History",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get User Memory",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Wait for DB Queries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Conversation History": {
+      "main": [
+        [
+          {
+            "node": "Wait for DB Queries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get User Memory": {
+      "main": [
+        [
+          {
+            "node": "Wait for DB Queries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for DB Queries": {
+      "main": [
+        [
+          {
+            "node": "Build AI Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build AI Prompt": {
+      "main": [
+        [
+          {
+            "node": "Gemini AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini AI": {
+      "main": [
+        [
+          {
+            "node": "Save Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Conversation": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["ronku-bot", "ai", "gemini"]
+}
