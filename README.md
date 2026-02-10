@@ -54,49 +54,69 @@
 
 ---
 
-## 🚀 Quick Start
-
-### Prerequisites
-
-- [Docker Desktop](https://www.docker.com/products/docker-desktop) installed
-- Telegram account
-- Google AI Studio account (for Gemini API key)
-
-### 1. Clone & Setup
+## 🚀 Quick Install (One Command)
 
 ```bash
-# Clone the repository
-git clone https://github.com/YOUR_USERNAME/ronkbot.git
-cd ronkbot
-
-# Copy environment template
-cp .env.example .env
-
-# Edit .env with your API keys
-nano .env  # or use your favorite editor
+curl -fsSL https://raw.githubusercontent.com/rohankag/ronkbot/main/install.sh | bash
 ```
 
-### 2. Get API Keys
+This interactive wizard will guide you through setup in 5-10 minutes.
 
-#### Telegram Bot Token
-1. Open Telegram and message [@BotFather](https://t.me/BotFather)
-2. Send `/newbot`
-3. Follow prompts to create your bot
-4. Copy the HTTP API token
-5. Paste it in `.env`: `TELEGRAM_BOT_TOKEN=your_token_here`
+### Alternative Installation Methods
 
-#### Gemini API Key
-1. Go to [Google AI Studio](https://ai.google.dev/)
-2. Sign in with your Google account
-3. Click "Get API Key"
-4. Create a new API key
-5. Paste it in `.env`: `GEMINI_API_KEY=your_key_here`
+**Homebrew (Mac):**
+```bash
+brew tap rohankag/ronkbot
+brew install ronkbot
+ronkbot config
+```
 
-### 3. Run the Installer
+**Docker:**
+```bash
+docker run -d \
+  --name ronkbot \
+  -p 5678:5678 \
+  -v ~/.ronkbot/data:/home/node/.n8n \
+  rohankag/ronkbot:latest
+```
+
+**Manual:**
+```bash
+git clone https://github.com/rohankag/ronkbot.git ~/.ronkbot
+cd ~/.ronkbot
+./install.sh
+```
+
+---
+
+## 📖 What the Installer Does
+
+The interactive wizard will:
+1. ✅ Check prerequisites (Docker, Git)
+2. 🤖 Guide you through Telegram bot creation
+3. 🔑 Help you get Gemini API key  
+4. 📧 (Optional) Setup Gmail OAuth
+5. 🔐 Generate secure configuration
+6. 🚀 Start ronkbot
+
+### CLI Commands Available
+
+After installation, use the `ronkbot` command:
 
 ```bash
-./scripts/install.sh
+ronkbot start      # Start the bot
+ronkbot stop       # Stop the bot  
+ronkbot status     # Check if running
+ronkbot logs       # View logs
+ronkbot config     # Reconfigure settings
+ronkbot update     # Update to latest
+ronkbot backup     # Backup data
+ronkbot help       # Show all commands
 ```
+
+### Manual Setup (If You Prefer)
+
+See [MANUAL_SETUP.md](docs/MANUAL_SETUP.md) for step-by-step manual configuration.
 
 This will:
 - Pull the n8n Docker image
