@@ -1,0 +1,182 @@
+{
+  "name": "04 - Gmail Authentication",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "gmail-auth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Gmail OAuth Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "gmail-oauth-callback"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse OAuth callback
+const query = $input.first().json.query;
+
+if (query.code) {
+  // Exchange code for tokens
+  return [{
+    json: {
+      auth_code: query.code,
+      scope: query.scope,
+      state: query.state
+    }
+  }];
+} else if (query.error) {
+  return [{
+    json: {
+      error: query.error,
+      error_description: query.error_description
+    }
+  }];
+}
+
+return [];"
+      },
+      "name": "Parse OAuth Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://oauth2.googleapis.com/token",
+        "body": {
+          "grant_type": "authorization_code",
+          "code": "={{ $json.auth_code }}",
+          "client_id": "={{ $env.GMAIL_CLIENT_ID }}",
+          "client_secret": "={{ $env.GMAIL_CLIENT_SECRET }}",
+          "redirect_uri": "http://localhost:5678/gmail-auth"
+        },
+        "options": {}
+      },
+      "name": "Exchange Code for Tokens",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT OR REPLACE INTO gmail_tokens (user_id, access_token, refresh_token, expires_at, scope, updated_at) VALUES ($1, $2, $3, datetime('now', '+3600 seconds'), $4, datetime('now'))",
+        "additionalFields": {
+          "parameters": [
+            {
+              "name": "user_id",
+              "value": "={{ $env.TELEGRAM_OWNER_USERNAME }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $json.access_token }}"
+            },
+            {
+              "name": "refresh_token",
+              "value": "={{ $json.refresh_token }}"
+            },
+            {
+              "name": "scope",
+              "value": "={{ $json.scope }}"
+            }
+          ]
+        }
+      },
+      "name": "Store Tokens",
+      "type": "n8n-nodes-base.sqlite",
+      "typeVersion": 2.2,
+      "position": [850, 200],
+      "credentials": {
+        "sqlite": {
+          "id": "ronkbot-db",
+          "name": "ronkbot Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "options": {},
+        "responseBody": "✅ Gmail authentication successful!\n\nYou can now use email commands in Telegram:\n• /email check - Check unread emails\n• /email read 1 - Read email #1\n• /email send - Send a new email\n\nClose this window and return to Telegram."
+      },
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "options": {},
+        "responseBody": "❌ Authentication failed: {{ $json.error }}\n\nPlease try again."
+      },
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [650, 400]
+    }
+  ],
+  "connections": {
+    "Gmail OAuth Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse OAuth Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse OAuth Response": {
+      "main": [
+        [
+          {
+            "node": "Exchange Code for Tokens",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Exchange Code for Tokens": {
+      "main": [
+        [
+          {
+            "node": "Store Tokens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Tokens": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["ronkbot", "gmail", "oauth"]
+}

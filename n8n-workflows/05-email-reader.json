@@ -1,0 +1,317 @@
+{
+  "name": "05 - Email Reader",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT access_token FROM gmail_tokens WHERE user_id = $1 AND expires_at > datetime('now')",
+        "additionalFields": {
+          "parameters": [
+            {
+              "name": "user_id",
+              "value": "={{ $json.userId }}"
+            }
+          ]
+        }
+      },
+      "name": "Get Access Token",
+      "type": "n8n-nodes-base.sqlite",
+      "typeVersion": 2.2,
+      "position": [450, 300],
+      "credentials": {
+        "sqlite": {
+          "id": "ronkbot-db",
+          "name": "ronkbot Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "maxResults",
+              "value": "={{ $json.limit || 10 }}"
+            },
+            {
+              "name": "labelIds",
+              "value": "={{ $json.label || 'INBOX' }}"
+            },
+            {
+              "name": "q",
+              "value": "={{ $json.searchQuery ? $json.searchQuery : 'is:unread' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Fetch Email List",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get list of message IDs
+const messages = $input.first().json.messages || [];
+
+if (messages.length === 0) {
+  return [{ json: { noEmails: true } }];
+}
+
+// Return each message ID for processing
+return messages.map((msg, index) => ({
+  json: {
+    id: msg.id,
+    threadId: msg.threadId,
+    index: index + 1
+  }
+}));"
+      },
+      "name": "Process Message List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://gmail.googleapis.com/gmail/v1/users/me/messages/' + $json.id }}",
+        "options": {}
+      },
+      "name": "Fetch Full Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Gmail message format
+const email = $input.first().json;
+
+// Extract headers
+const headers = {};
+email.payload.headers.forEach(header => {
+  headers[header.name.toLowerCase()] = header.value;
+});
+
+// Extract body
+let bodyText = '';
+let bodyHtml = '';
+
+function extractBody(parts) {
+  if (!parts) return;
+  
+  parts.forEach(part => {
+    if (part.mimeType === 'text/plain' && part.body.data) {
+      bodyText = Buffer.from(part.body.data, 'base64').toString('utf-8');
+    } else if (part.mimeType === 'text/html' && part.body.data) {
+      bodyHtml = Buffer.from(part.body.data, 'base64').toString('utf-8');
+    } else if (part.parts) {
+      extractBody(part.parts);
+    }
+  });
+}
+
+if (email.payload.parts) {
+  extractBody(email.payload.parts);
+} else if (email.payload.body && email.payload.body.data) {
+  bodyText = Buffer.from(email.payload.body.data, 'base64').toString('utf-8');
+}
+
+// Parse sender
+const fromHeader = headers.from || 'Unknown';
+const senderMatch = fromHeader.match(/(.*)<(.*)>/);
+const senderName = senderMatch ? senderMatch[1].trim() : fromHeader;
+const senderEmail = senderMatch ? senderMatch[2] : fromHeader;
+
+// Check for attachments
+const hasAttachments = email.payload.parts && email.payload.parts.some(p => p.filename && p.filename.length > 0);
+const attachmentNames = hasAttachments 
+  ? email.payload.parts.filter(p => p.filename).map(p => p.filename).join(', ')
+  : '';
+
+return [{
+  json: {
+    gmail_id: email.id,
+    thread_id: email.threadId,
+    sender_name: senderName,
+    sender_email: senderEmail,
+    subject: headers.subject || '(No Subject)',
+    date: headers.date,
+    snippet: email.snippet,
+    body_text: bodyText.substring(0, 10000), // Limit size
+    body_html: bodyHtml.substring(0, 10000),
+    is_read: !email.labelIds.includes('UNREAD'),
+    labels: JSON.stringify(email.labelIds),
+    has_attachments: hasAttachments,
+    attachment_names: attachmentNames,
+    history_id: email.historyId
+  }
+}];"
+      },
+      "name": "Parse Email Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT OR REPLACE INTO emails (gmail_id, thread_id, user_id, sender_name, sender_email, subject, snippet, body_text, body_html, received_at, is_read, labels, has_attachments, attachment_names, cached_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, datetime('now'))",
+        "additionalFields": {
+          "parameters": [
+            {
+              "name": "gmail_id",
+              "value": "={{ $json.gmail_id }}"
+            },
+            {
+              "name": "thread_id",
+              "value": "={{ $json.thread_id }}"
+            },
+            {
+              "name": "user_id",
+              "value": "={{ $('Execute Workflow Trigger').first().json.userId }}"
+            },
+            {
+              "name": "sender_name",
+              "value": "={{ $json.sender_name }}"
+            },
+            {
+              "name": "sender_email",
+              "value": "={{ $json.sender_email }}"
+            },
+            {
+              "name": "subject",
+              "value": "={{ $json.subject }}"
+            },
+            {
+              "name": "snippet",
+              "value": "={{ $json.snippet }}"
+            },
+            {
+              "name": "body_text",
+              "value": "={{ $json.body_text }}"
+            },
+            {
+              "name": "body_html",
+              "value": "={{ $json.body_html }}"
+            },
+            {
+              "name": "received_at",
+              "value": "={{ $json.date }}"
+            },
+            {
+              "name": "is_read",
+              "value": "={{ $json.is_read }}"
+            },
+            {
+              "name": "labels",
+              "value": "={{ $json.labels }}"
+            },
+            {
+              "name": "has_attachments",
+              "value": "={{ $json.has_attachments }}"
+            },
+            {
+              "name": "attachment_names",
+              "value": "={{ $json.attachment_names }}"
+            }
+          ]
+        }
+      },
+      "name": "Cache Email",
+      "type": "n8n-nodes-base.sqlite",
+      "typeVersion": 2.2,
+      "position": [1450, 300],
+      "credentials": {
+        "sqlite": {
+          "id": "ronkbot-db",
+          "name": "ronkbot Database"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Access Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Access Token": {
+      "main": [
+        [
+          {
+            "node": "Fetch Email List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Email List": {
+      "main": [
+        [
+          {
+            "node": "Process Message List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Message List": {
+      "main": [
+        [
+          {
+            "node": "Fetch Full Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Full Email": {
+      "main": [
+        [
+          {
+            "node": "Parse Email Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Email Content": {
+      "main": [
+        [
+          {
+            "node": "Cache Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": ["ronkbot", "gmail", "email", "read"]
+}
