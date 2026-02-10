@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 Starting ronku_bot..."
+echo "🚀 Starting ronkbot..."
 
 cd "$(dirname "$0")/.."
 
@@ -13,9 +13,9 @@ fi
 
 # Check if already running
 if $COMPOSE_CMD ps | grep -q "Up"; then
-    echo "✅ ronku_bot is already running!"
+    echo "✅ ronkbot is already running!"
     echo "🌐 n8n UI: http://localhost:5678"
-    echo "📱 Test your bot on Telegram: @ronku_bot"
+    echo "📱 Test your bot on Telegram: @ronkbot"
     exit 0
 fi
 
@@ -27,9 +27,9 @@ sleep 3
 
 # Check if started successfully
 if curl -s http://localhost:5678/healthz > /dev/null 2>&1; then
-    echo "✅ ronku_bot is running!"
+    echo "✅ ronkbot is running!"
     echo "🌐 n8n UI: http://localhost:5678"
-    echo "📱 Test your bot on Telegram: @ronku_bot"
+    echo "📱 Test your bot on Telegram: @ronkbot"
 else
     echo "⏳ Starting up... check again in 10 seconds"
     echo "   Or view logs: $COMPOSE_CMD logs -f"

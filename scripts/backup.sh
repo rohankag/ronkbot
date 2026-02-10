@@ -4,13 +4,13 @@
 BACKUP_DIR="backups/$(date +%Y%m%d_%H%M%S)"
 mkdir -p "$BACKUP_DIR"
 
-echo "💾 Backing up ronku_bot..."
+echo "💾 Backing up ronkbot..."
 echo "   Destination: $BACKUP_DIR"
 
 # Backup database
 echo "📦 Backing up database..."
-if [ -f "data/sqlite/ronku-bot.db" ]; then
-    cp data/sqlite/ronku-bot.db "$BACKUP_DIR/"
+if [ -f "data/sqlite/ronkbot.db" ]; then
+    cp data/sqlite/ronkbot.db "$BACKUP_DIR/"
     echo "   ✅ Database backed up"
 else
     echo "   ⚠️  No database file found"
@@ -33,19 +33,19 @@ fi
 # Create backup info
 echo "📋 Creating backup info..."
 cat > "$BACKUP_DIR/BACKUP_INFO.txt" << EOF
-ronku_bot Backup
+ronkbot Backup
 ================
 Date: $(date)
 Version: 1.0
 
 Contents:
-- ronku-bot.db: Conversation history and memory
+- ronkbot.db: Conversation history and memory
 - .env: Configuration (includes API keys)
 - n8n-workflows/: Exported workflow files
 
 To restore:
 1. Copy .env back to project root
-2. Copy ronku-bot.db to data/sqlite/
+2. Copy ronkbot.db to data/sqlite/
 3. Copy workflows to n8n-workflows/
 4. Import workflows in n8n UI
 EOF
@@ -56,5 +56,5 @@ echo "   Location: $BACKUP_DIR"
 echo ""
 echo "💡 To restore from this backup:"
 echo "   cp $BACKUP_DIR/.env ."
-echo "   cp $BACKUP_DIR/ronku-bot.db data/sqlite/"
+echo "   cp $BACKUP_DIR/ronkbot.db data/sqlite/"
 echo "   cp -r $BACKUP_DIR/n8n-workflows/* n8n-workflows/"

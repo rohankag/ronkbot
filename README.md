@@ -1,4 +1,4 @@
-# 🤖 Telegram AI Assistant
+# 🤖 ronkbot
 
 [![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 [![n8n](https://img.shields.io/badge/n8n-%23FF6D5A.svg?style=for-the-badge&logo=n8n&logoColor=white)](https://n8n.io/)
@@ -6,7 +6,7 @@
 [![Telegram](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://telegram.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
 
-A personal AI assistant that runs on your Mac (or any machine with Docker) and responds to Telegram messages. Built with **n8n** workflows and powered by **Google Gemini API**.
+**ronkbot** - A personal AI assistant that runs on your Mac and responds to Telegram messages. Like Moltbot, but safer and fully open-source. Built with **n8n** workflows and powered by **Google Gemini API**.
 
 > 💡 **Privacy First**: Your data stays local. Conversations are stored in a local SQLite database, not in the cloud.
 
@@ -66,8 +66,8 @@ A personal AI assistant that runs on your Mac (or any machine with Docker) and r
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/telegram-ai-assistant.git
-cd telegram-ai-assistant
+git clone https://github.com/YOUR_USERNAME/ronkbot.git
+cd ronkbot
 
 # Copy environment template
 cp .env.example .env
@@ -196,7 +196,7 @@ ALLOWED_COMMANDS=df,du,git,ls,cat,ps,top,whoami,pwd,date,cal
 ### Project Structure
 
 ```
-telegram-ai-assistant/
+ronkbot/
 ├── docker-compose.yml      # Docker configuration
 ├── .env                    # Your secrets (gitignored)
 ├── .env.example            # Template for new users
@@ -246,7 +246,7 @@ This creates a timestamped backup in `backups/` folder.
 ```bash
 # Copy backup files back
 cp backups/YYYYMMDD_HHMMSS/.env .
-cp backups/YYYYMMDD_HHMMSS/ronku-bot.db data/sqlite/
+cp backups/YYYYMMDD_HHMMSS/ronkbot.db data/sqlite/
 cp -r backups/YYYYMMDD_HHMMSS/n8n-workflows/* n8n-workflows/
 
 # Restart

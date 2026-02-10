@@ -2,7 +2,7 @@
 
 set -e
 
-echo "🚀 Setting up ronku_bot..."
+echo "🚀 Setting up ronkbot..."
 echo ""
 
 # Colors for output

@@ -1,6 +1,6 @@
-# ronku_bot Commands Reference
+# ronkbot Commands Reference
 
-Complete guide to all commands available in ronku_bot.
+Complete guide to all commands available in ronkbot.
 
 ## 💬 Natural Chat
 
@@ -166,7 +166,7 @@ Read contents of a text file.
 Examples:
 /read ~/Documents/todo.txt
 /read ~/Projects/myapp/README.md
-/read /Users/ronkuwonku/Downloads/notes.txt
+/read /Users/owner/Downloads/notes.txt
 ```
 
 **Response:**
@@ -195,7 +195,7 @@ Examples:
 
 **Response:**
 ```
-📁 /Users/ronkuwonku/Projects
+📁 /Users/owner/Projects
 
 drwxr-xr-x  myapp/
 drwxr-xr-x  website/
@@ -296,7 +296,7 @@ For security, these are blocked:
 ❌ **Modify system** - Cannot change settings  
 ❌ **Access all files** - Only allowed directories  
 ❌ **Run any command** - Only whitelisted safe commands  
-❌ **Access other users** - Only responds to @ronkuwonku  
+❌ **Access other users** - Only responds to @owner  
 ❌ **Internet access** - Cannot browse web (unless configured)  
 
 ## 🆘 Getting Help
