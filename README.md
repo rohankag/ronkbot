@@ -6,7 +6,7 @@
 [![Telegram](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://telegram.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
 
-**ronkbot** - A personal AI assistant that runs on your Mac and responds to Telegram messages. Like Moltbot, but safer and fully open-source. Built with **n8n** workflows and powered by **Google Gemini API**.
+**ronkbot** - A personal AI assistant that runs on your Mac and responds to Telegram messages. Built with **n8n** workflows and powered by **Google Gemini API**.
 
 > 💡 **Privacy First**: Your data stays local. Conversations are stored in a local SQLite database, not in the cloud.
 
