@@ -62,16 +62,34 @@ curl -fsSL https://raw.githubusercontent.com/rohankag/ronkbot/main/install.sh | 
 
 This interactive wizard will guide you through setup in 5-10 minutes.
 
+---
+
+### 🔒 Security Note
+
+The installer uses `curl | bash` for convenience. To verify the script first:
+
+```bash
+# Download and inspect
+curl -fsSL https://raw.githubusercontent.com/rohankag/ronkbot/main/install.sh -o install.sh
+less install.sh
+
+# Then run
+bash install.sh
+```
+
+---
+
 ### Alternative Installation Methods
 
-**Homebrew (Mac):**
+**Homebrew (Mac) - Coming Soon**
 ```bash
 brew tap rohankag/ronkbot
 brew install ronkbot
 ronkbot config
 ```
+*Homebrew tap in development. For now, use the curl installer above.*
 
-**Docker:**
+**Docker - Coming Soon**
 ```bash
 docker run -d \
   --name ronkbot \
@@ -79,6 +97,7 @@ docker run -d \
   -v ~/.ronkbot/data:/home/node/.n8n \
   rohankag/ronkbot:latest
 ```
+*Docker Hub image in development. For now, use the curl installer above or build locally.*
 
 **Manual:**
 ```bash

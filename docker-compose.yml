@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   n8n:
     image: n8nio/n8n:latest
@@ -18,7 +16,7 @@ services:
       - GENERIC_TIMEZONE=UTC
       - N8N_LOG_LEVEL=info
       - N8N_METRICS=true
-      - N8N_DIAGONISTICS_ENABLED=false
+      - N8N_DIAGNOSTICS_ENABLED=false
       - DB_TYPE=${DB_TYPE}
       - DB_SQLITE_PATH=${DB_SQLITE_PATH}
       - EXECUTIONS_MODE=regular
