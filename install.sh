@@ -29,6 +29,7 @@ print_header() {
     echo "${CYAN}╔════════════════════════════════════════════════════════╗${NC}"
     echo "${CYAN}║${NC}                                                        ${CYAN}║${NC}"
     echo "${CYAN}║${NC}   🤖 ${BOLD}ronkbot${NC} - Personal AI Assistant Installer        ${CYAN}║${NC}"
+    echo "${CYAN}║${NC}   Version: ${VERSION}                                       ${CYAN}║${NC}"
     echo "${CYAN}║${NC}                                                        ${CYAN}║${NC}"
     echo "${CYAN}╚════════════════════════════════════════════════════════╝${NC}"
     echo ""
@@ -383,7 +384,7 @@ TELEGRAM_OWNER_USERNAME=$TELEGRAM_OWNER_USERNAME
 # GEMINI API CONFIGURATION
 # ═══════════════════════════════════════════════════════════════
 GEMINI_API_KEY=$GEMINI_API_KEY
-GEMINI_MODEL=gemini-3-flash
+GEMINI_MODEL=$GEMINI_MODEL
 
 # ═══════════════════════════════════════════════════════════════
 # N8N SECURITY
@@ -739,6 +740,7 @@ case "${1:-help}" in
     doctor) cmd_doctor ;;
     reset) cmd_reset ;;
     help|--help|-h) show_help ;;
+    version|--version) echo "ronkbot ${VERSION}" ;;
     *) echo "Unknown command: $1"; show_help; exit 1 ;;
 esac
 EOF

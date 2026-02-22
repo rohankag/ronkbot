@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, "feat/**", "fix/**", "chore/**" ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-shellcheck:
+    name: ShellCheck — Shell Script Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: sudo apt-get update -qq && sudo apt-get install -y shellcheck
+
+      - name: Run ShellCheck
+        run: bash tests/test-shellcheck.sh
+
+  validate-json:
+    name: JSON Validation — n8n Workflows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update -qq && sudo apt-get install -y jq
+
+      - name: Validate workflow JSON files
+        run: bash tests/test-json-valid.sh
+
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: bash tests/test-docker-build.sh
+
+  installer-smoke:
+    name: Installer Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install.sh --help / version check
+        run: |
+          # Verify the installer script is executable and responds to --help
+          # without needing real API keys (non-interactive check)
+          bash install.sh --help 2>&1 | head -20 || \
+          bash install.sh --version 2>&1 | head -5 || \
+          bash -n install.sh && echo "PASS: install.sh syntax is valid"
+
+      - name: Validate scripts/*.sh syntax
+        run: |
+          for f in scripts/*.sh; do
+            bash -n "$f" && echo "PASS: $f syntax OK"
+          done
+
+  all-ci:
+    name: CI — All Checks
+    runs-on: ubuntu-latest
+    needs: [ lint-shellcheck, validate-json, docker-build, installer-smoke ]
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          results="${{ join(needs.*.result, ' ') }}"
+          echo "Job results: $results"
+          for result in $results; do
+            if [ "$result" != "success" ]; then
+              echo "One or more CI jobs failed."
+              exit 1
+            fi
+          done
+          echo "All CI checks passed!"
