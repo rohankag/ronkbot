@@ -6,7 +6,10 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [250, 300]
+      "position": [
+        250,
+        300
+      ]
     },
     {
       "parameters": {
@@ -24,7 +27,10 @@
       "name": "Get Access Token",
       "type": "n8n-nodes-base.sqlite",
       "typeVersion": 2.2,
-      "position": [450, 300],
+      "position": [
+        450,
+        300
+      ],
       "credentials": {
         "sqlite": {
           "id": "ronkbot-db",
@@ -58,30 +64,22 @@
       "name": "Fetch Email List",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [650, 300]
+      "position": [
+        650,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Get list of message IDs
-const messages = $input.first().json.messages || [];
-
-if (messages.length === 0) {
-  return [{ json: { noEmails: true } }];
-}
-
-// Return each message ID for processing
-return messages.map((msg, index) => ({
-  json: {
-    id: msg.id,
-    threadId: msg.threadId,
-    index: index + 1
-  }
-}));"
+        "jsCode": "// Get list of message IDs\nconst messages = $input.first().json.messages || [];\n\nif (messages.length === 0) {\n  return [{ json: { noEmails: true } }];\n}\n\n// Return each message ID for processing\nreturn messages.map((msg, index) => ({\n  json: {\n    id: msg.id,\n    threadId: msg.threadId,\n    index: index + 1\n  }\n}));"
       },
       "name": "Process Message List",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [850, 300]
+      "position": [
+        850,
+        300
+      ]
     },
     {
       "parameters": {
@@ -92,78 +90,22 @@ return messages.map((msg, index) => ({
       "name": "Fetch Full Email",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [1050, 300]
+      "position": [
+        1050,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Parse Gmail message format
-const email = $input.first().json;
-
-// Extract headers
-const headers = {};
-email.payload.headers.forEach(header => {
-  headers[header.name.toLowerCase()] = header.value;
-});
-
-// Extract body
-let bodyText = '';
-let bodyHtml = '';
-
-function extractBody(parts) {
-  if (!parts) return;
-  
-  parts.forEach(part => {
-    if (part.mimeType === 'text/plain' && part.body.data) {
-      bodyText = Buffer.from(part.body.data, 'base64').toString('utf-8');
-    } else if (part.mimeType === 'text/html' && part.body.data) {
-      bodyHtml = Buffer.from(part.body.data, 'base64').toString('utf-8');
-    } else if (part.parts) {
-      extractBody(part.parts);
-    }
-  });
-}
-
-if (email.payload.parts) {
-  extractBody(email.payload.parts);
-} else if (email.payload.body && email.payload.body.data) {
-  bodyText = Buffer.from(email.payload.body.data, 'base64').toString('utf-8');
-}
-
-// Parse sender
-const fromHeader = headers.from || 'Unknown';
-const senderMatch = fromHeader.match(/(.*)<(.*)>/);
-const senderName = senderMatch ? senderMatch[1].trim() : fromHeader;
-const senderEmail = senderMatch ? senderMatch[2] : fromHeader;
-
-// Check for attachments
-const hasAttachments = email.payload.parts && email.payload.parts.some(p => p.filename && p.filename.length > 0);
-const attachmentNames = hasAttachments 
-  ? email.payload.parts.filter(p => p.filename).map(p => p.filename).join(', ')
-  : '';
-
-return [{
-  json: {
-    gmail_id: email.id,
-    thread_id: email.threadId,
-    sender_name: senderName,
-    sender_email: senderEmail,
-    subject: headers.subject || '(No Subject)',
-    date: headers.date,
-    snippet: email.snippet,
-    body_text: bodyText.substring(0, 10000), // Limit size
-    body_html: bodyHtml.substring(0, 10000),
-    is_read: !email.labelIds.includes('UNREAD'),
-    labels: JSON.stringify(email.labelIds),
-    has_attachments: hasAttachments,
-    attachment_names: attachmentNames,
-    history_id: email.historyId
-  }
-}];"
+        "jsCode": "// Parse Gmail message format\nconst email = $input.first().json;\n\n// Extract headers\nconst headers = {};\nemail.payload.headers.forEach(header => {\n  headers[header.name.toLowerCase()] = header.value;\n});\n\n// Extract body\nlet bodyText = '';\nlet bodyHtml = '';\n\nfunction extractBody(parts) {\n  if (!parts) return;\n  \n  parts.forEach(part => {\n    if (part.mimeType === 'text/plain' && part.body.data) {\n      bodyText = Buffer.from(part.body.data, 'base64').toString('utf-8');\n    } else if (part.mimeType === 'text/html' && part.body.data) {\n      bodyHtml = Buffer.from(part.body.data, 'base64').toString('utf-8');\n    } else if (part.parts) {\n      extractBody(part.parts);\n    }\n  });\n}\n\nif (email.payload.parts) {\n  extractBody(email.payload.parts);\n} else if (email.payload.body && email.payload.body.data) {\n  bodyText = Buffer.from(email.payload.body.data, 'base64').toString('utf-8');\n}\n\n// Parse sender\nconst fromHeader = headers.from || 'Unknown';\nconst senderMatch = fromHeader.match(/(.*)<(.*)>/);\nconst senderName = senderMatch ? senderMatch[1].trim() : fromHeader;\nconst senderEmail = senderMatch ? senderMatch[2] : fromHeader;\n\n// Check for attachments\nconst hasAttachments = email.payload.parts && email.payload.parts.some(p => p.filename && p.filename.length > 0);\nconst attachmentNames = hasAttachments \n  ? email.payload.parts.filter(p => p.filename).map(p => p.filename).join(', ')\n  : '';\n\nreturn [{\n  json: {\n    gmail_id: email.id,\n    thread_id: email.threadId,\n    sender_name: senderName,\n    sender_email: senderEmail,\n    subject: headers.subject || '(No Subject)',\n    date: headers.date,\n    snippet: email.snippet,\n    body_text: bodyText.substring(0, 10000), // Limit size\n    body_html: bodyHtml.substring(0, 10000),\n    is_read: !email.labelIds.includes('UNREAD'),\n    labels: JSON.stringify(email.labelIds),\n    has_attachments: hasAttachments,\n    attachment_names: attachmentNames,\n    history_id: email.historyId\n  }\n}];"
       },
       "name": "Parse Email Content",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1250, 300]
+      "position": [
+        1250,
+        300
+      ]
     },
     {
       "parameters": {
@@ -233,7 +175,10 @@ return [{
       "name": "Cache Email",
       "type": "n8n-nodes-base.sqlite",
       "typeVersion": 2.2,
-      "position": [1450, 300],
+      "position": [
+        1450,
+        300
+      ],
       "credentials": {
         "sqlite": {
           "id": "ronkbot-db",
@@ -313,5 +258,10 @@ return [{
   "settings": {
     "executionOrder": "v1"
   },
-  "tags": ["ronkbot", "gmail", "email", "read"]
+  "tags": [
+    "ronkbot",
+    "gmail",
+    "email",
+    "read"
+  ]
 }

@@ -135,7 +135,7 @@ ronkbot help       # Show all commands
 
 ### Manual Setup (If You Prefer)
 
-See [MANUAL_SETUP.md](docs/MANUAL_SETUP.md) for step-by-step manual configuration.
+For manual configuration, follow the steps below or refer to `docs/COMMANDS.md` for the full command reference.
 
 This will:
 - Pull the n8n Docker image
@@ -243,11 +243,22 @@ ronkbot/
 ├── n8n-workflows/          # Workflow JSON files
 │   ├── 01-telegram-listener.json
 │   ├── 02-gemini-chat.json
-│   └── 03-command-handler.json
+│   ├── 03-command-handler.json
+│   ├── 04-gmail-authentication.json
+│   ├── 05-email-reader.json
+│   └── 06-email-sender.json
 ├── scripts/                # Helper scripts
 │   ├── install.sh
 │   ├── start.sh
 │   └── backup.sh
+├── tests/                  # Automated tests
+│   ├── run-tests.sh
+│   ├── test-json-valid.sh
+│   ├── test-shellcheck.sh
+│   └── test-docker-build.sh
+├── .github/
+│   └── workflows/
+│       └── ci.yml          # GitHub Actions CI
 ├── data/                   # Persistent data (gitignored)
 │   └── sqlite/
 └── docs/

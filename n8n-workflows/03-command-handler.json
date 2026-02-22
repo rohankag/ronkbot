@@ -6,7 +6,10 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [250, 300]
+      "position": [
+        250,
+        300
+      ]
     },
     {
       "parameters": {
@@ -15,7 +18,10 @@
       "name": "Parse Command",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [450, 300]
+      "position": [
+        450,
+        300
+      ]
     },
     {
       "parameters": {
@@ -59,7 +65,10 @@
       "name": "Route Command",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 2,
-      "position": [650, 300]
+      "position": [
+        650,
+        300
+      ]
     },
     {
       "parameters": {
@@ -72,7 +81,10 @@
       "name": "Help Response",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.1,
-      "position": [850, 100],
+      "position": [
+        850,
+        100
+      ],
       "credentials": {
         "telegramApi": {
           "id": "telegram-credentials",
@@ -88,7 +100,10 @@
       "name": "Get Disk Usage",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
-      "position": [850, 200]
+      "position": [
+        850,
+        200
+      ]
     },
     {
       "parameters": {
@@ -98,16 +113,22 @@
       "name": "Get Memory",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
-      "position": [850, 300]
+      "position": [
+        850,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Format status response\nconst diskOutput = $('Get Disk Usage').first().json.stdout || 'N/A';\nconst memOutput = $('Get Memory').first().json.stdout || 'N/A';\n\nconst message = `📊 **System Status**\\n\\n💾 **Disk Usage:**\\n\`\`\`\\n${diskOutput}\`\`\`\\n\\n🧠 **Memory:**\\n\`\`\`\\n${memOutput}\`\`\`\\n\\n⏱️ Last updated: ${new Date().toLocaleString()}`;\n\nreturn [{\n  json: {\n    message: message,\n    chatId: $input.first().json.chatId\n  }\n}];"
+        "jsCode": "// Format status response\nconst diskOutput = $('Get Disk Usage').first().json.stdout || 'N/A';\nconst memOutput = $('Get Memory').first().json.stdout || 'N/A';\n\nconst message = `📊 **System Status**\\n\\n💾 **Disk Usage:**\\n\\`\\`\\`\\n${diskOutput}\\`\\`\\`\\n\\n🧠 **Memory:**\\n\\`\\`\\`\\n${memOutput}\\`\\`\\`\\n\\n⏱️ Last updated: ${new Date().toLocaleString()}`;\n\nreturn [{\n  json: {\n    message: message,\n    chatId: $input.first().json.chatId\n  }\n}];"
       },
       "name": "Format Status",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1050, 250]
+      "position": [
+        1050,
+        250
+      ]
     },
     {
       "parameters": {
@@ -120,7 +141,10 @@
       "name": "Send Status",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.1,
-      "position": [1250, 250],
+      "position": [
+        1250,
+        250
+      ],
       "credentials": {
         "telegramApi": {
           "id": "telegram-credentials",
@@ -152,7 +176,10 @@
       "name": "Save Memory",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.2,
-      "position": [850, 400],
+      "position": [
+        850,
+        400
+      ],
       "credentials": {
         "postgres": {
           "id": "sqlite-credentials",
@@ -169,7 +196,10 @@
       "name": "Confirm Remember",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.1,
-      "position": [1050, 400],
+      "position": [
+        1050,
+        400
+      ],
       "credentials": {
         "telegramApi": {
           "id": "telegram-credentials",
@@ -193,7 +223,10 @@
       "name": "Get All Memory",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.2,
-      "position": [850, 500],
+      "position": [
+        850,
+        500
+      ],
       "credentials": {
         "postgres": {
           "id": "sqlite-credentials",
@@ -208,7 +241,10 @@
       "name": "Format Memory List",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1050, 500]
+      "position": [
+        1050,
+        500
+      ]
     },
     {
       "parameters": {
@@ -221,7 +257,10 @@
       "name": "Send Memory",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.1,
-      "position": [1250, 500],
+      "position": [
+        1250,
+        500
+      ],
       "credentials": {
         "telegramApi": {
           "id": "telegram-credentials",
@@ -245,7 +284,10 @@
       "name": "Clear History",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.2,
-      "position": [850, 600],
+      "position": [
+        850,
+        600
+      ],
       "credentials": {
         "postgres": {
           "id": "sqlite-credentials",
@@ -264,7 +306,10 @@
       "name": "Confirm Clear",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.1,
-      "position": [1050, 600],
+      "position": [
+        1050,
+        600
+      ],
       "credentials": {
         "telegramApi": {
           "id": "telegram-credentials",
@@ -422,5 +467,8 @@
     "executionOrder": "v1"
   },
   "staticData": null,
-  "tags": ["ronku-bot", "commands"]
+  "tags": [
+    "ronku-bot",
+    "commands"
+  ]
 }

@@ -3,22 +3,9 @@ FROM n8nio/n8n:latest
 LABEL maintainer="ronkbot"
 LABEL description="Personal AI Assistant with Telegram and Gemini"
 
-# Install additional dependencies
-USER root
-RUN apk add --no-cache \
-    sqlite \
-    curl \
-    jq
-
-# Create app directory
-WORKDIR /app
-
-# Copy workflow files
-COPY n8n-workflows /app/workflows
-COPY scripts /app/scripts
-
-# Set proper permissions
-RUN chmod +x /app/scripts/*.sh
+# n8n runs as `node` user — no additional system packages needed.
+# n8n's hardened image has apk removed; workflows and scripts are
+# mounted via docker-compose volumes at runtime.
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
@@ -27,6 +14,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 # Expose n8n port
 EXPOSE 5678
 
-# Start n8n
-USER node
+# Start n8n (default CMD from parent image — explicit here for clarity)
 CMD ["n8n"]
