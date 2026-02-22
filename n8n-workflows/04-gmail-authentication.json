@@ -11,38 +11,23 @@
       "name": "Gmail OAuth Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [250, 300],
+      "position": [
+        250,
+        300
+      ],
       "webhookId": "gmail-oauth-callback"
     },
     {
       "parameters": {
-        "jsCode": "// Parse OAuth callback
-const query = $input.first().json.query;
-
-if (query.code) {
-  // Exchange code for tokens
-  return [{
-    json: {
-      auth_code: query.code,
-      scope: query.scope,
-      state: query.state
-    }
-  }];
-} else if (query.error) {
-  return [{
-    json: {
-      error: query.error,
-      error_description: query.error_description
-    }
-  }];
-}
-
-return [];"
+        "jsCode": "// Parse OAuth callback\nconst query = $input.first().json.query;\n\nif (query.code) {\n  // Exchange code for tokens\n  return [{\n    json: {\n      auth_code: query.code,\n      scope: query.scope,\n      state: query.state\n    }\n  }];\n} else if (query.error) {\n  return [{\n    json: {\n      error: query.error,\n      error_description: query.error_description\n    }\n  }];\n}\n\nreturn [];"
       },
       "name": "Parse OAuth Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [450, 300]
+      "position": [
+        450,
+        300
+      ]
     },
     {
       "parameters": {
@@ -60,7 +45,10 @@ return [];"
       "name": "Exchange Code for Tokens",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [650, 200]
+      "position": [
+        650,
+        200
+      ]
     },
     {
       "parameters": {
@@ -90,7 +78,10 @@ return [];"
       "name": "Store Tokens",
       "type": "n8n-nodes-base.sqlite",
       "typeVersion": 2.2,
-      "position": [850, 200],
+      "position": [
+        850,
+        200
+      ],
       "credentials": {
         "sqlite": {
           "id": "ronkbot-db",
@@ -107,7 +98,10 @@ return [];"
       "name": "Success Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1050, 200]
+      "position": [
+        1050,
+        200
+      ]
     },
     {
       "parameters": {
@@ -118,7 +112,10 @@ return [];"
       "name": "Error Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [650, 400]
+      "position": [
+        650,
+        400
+      ]
     }
   ],
   "connections": {
@@ -178,5 +175,9 @@ return [];"
     "executionOrder": "v1"
   },
   "staticData": null,
-  "tags": ["ronkbot", "gmail", "oauth"]
+  "tags": [
+    "ronkbot",
+    "gmail",
+    "oauth"
+  ]
 }

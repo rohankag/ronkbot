@@ -6,30 +6,22 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [250, 300]
+      "position": [
+        250,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Parse command and determine action type
-const command = $input.first().json.command; // 'send', 'reply', 'draft'
-const args = $input.first().json.args || '';
-const emailId = $input.first().json.emailId;
-
-return [{
-  json: {
-    command: command,
-    args: args,
-    emailId: emailId,
-    userId: $input.first().json.userId,
-    chatId: $input.first().json.chatId,
-    username: $input.first().json.username
-  }
-}];"
+        "jsCode": "// Parse command and determine action type\nconst command = $input.first().json.command; // 'send', 'reply', 'draft'\nconst args = $input.first().json.args || '';\nconst emailId = $input.first().json.emailId;\n\nreturn [{\n  json: {\n    command: command,\n    args: args,\n    emailId: emailId,\n    userId: $input.first().json.userId,\n    chatId: $input.first().json.chatId,\n    username: $input.first().json.username\n  }\n}];"
       },
       "name": "Parse Command",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [450, 300]
+      "position": [
+        450,
+        300
+      ]
     },
     {
       "parameters": {
@@ -51,7 +43,10 @@ return [{
       "name": "Get Original Email",
       "type": "n8n-nodes-base.sqlite",
       "typeVersion": 2.2,
-      "position": [650, 200],
+      "position": [
+        650,
+        200
+      ],
       "credentials": {
         "sqlite": {
           "id": "ronkbot-db",
@@ -75,7 +70,10 @@ return [{
       "name": "Get Writing Style",
       "type": "n8n-nodes-base.sqlite",
       "typeVersion": 2.2,
-      "position": [650, 400],
+      "position": [
+        650,
+        400
+      ],
       "credentials": {
         "sqlite": {
           "id": "ronkbot-db",
@@ -85,65 +83,15 @@ return [{
     },
     {
       "parameters": {
-        "jsCode": "// Build AI prompt for reply generation
-const originalEmail = $('Get Original Email').first().json;
-const style = $('Get Writing Style').first().json || {};
-
-if (!originalEmail) {
-  return [{ json: { error: 'Email not found' } }];
-}
-
-// Build style description
-let styleDesc = 'professional but friendly';
-if (style.greeting_style) {
-  styleDesc = `${style.greeting_style} and ${style.sign_off_style || 'professional'}`;
-}
-
-const prompt = `You are helping write an email reply. Here is the context:
-
-ORIGINAL EMAIL:
-From: ${originalEmail.sender_name} <${originalEmail.sender_email}>
-Subject: ${originalEmail.subject}
-
-Body:
-${originalEmail.body_text.substring(0, 2000)}
-
-WRITING STYLE:
-The user writes in a ${styleDesc} tone.
-${style.common_phrases ? 'Common phrases they use: ' + style.common_phrases : ''}
-${style.formality_score ? 'Formality level: ' + (style.formality_score > 0.5 ? 'formal' : 'casual') : ''}
-
-TASK:
-Generate 3 different reply options:
-1. FORMAL - Professional, polite, business-like
-2. CASUAL - Friendly, warm, conversational
-3. BRIEF - Short, direct, to the point
-
-For each option, provide:
-- Subject line (if different from original)
-- Full email body
-- Brief explanation of the tone/style
-
-Make sure the replies:
-- Address the key points in the original email
-- Match the user's writing style
-- Are appropriate for the relationship with the sender
-- Sound natural and human-written
-
-Format as JSON with keys: formal, casual, brief`;
-
-return [{
-  json: {
-    prompt: prompt,
-    originalEmail: originalEmail,
-    chatId: $input.first().json.chatId
-  }
-}];"
+        "jsCode": "// Build AI prompt for reply generation\nconst originalEmail = $('Get Original Email').first().json;\nconst style = $('Get Writing Style').first().json || {};\n\nif (!originalEmail) {\n  return [{ json: { error: 'Email not found' } }];\n}\n\n// Build style description\nlet styleDesc = 'professional but friendly';\nif (style.greeting_style) {\n  styleDesc = `${style.greeting_style} and ${style.sign_off_style || 'professional'}`;\n}\n\nconst prompt = `You are helping write an email reply. Here is the context:\n\nORIGINAL EMAIL:\nFrom: ${originalEmail.sender_name} <${originalEmail.sender_email}>\nSubject: ${originalEmail.subject}\n\nBody:\n${originalEmail.body_text.substring(0, 2000)}\n\nWRITING STYLE:\nThe user writes in a ${styleDesc} tone.\n${style.common_phrases ? 'Common phrases they use: ' + style.common_phrases : ''}\n${style.formality_score ? 'Formality level: ' + (style.formality_score > 0.5 ? 'formal' : 'casual') : ''}\n\nTASK:\nGenerate 3 different reply options:\n1. FORMAL - Professional, polite, business-like\n2. CASUAL - Friendly, warm, conversational\n3. BRIEF - Short, direct, to the point\n\nFor each option, provide:\n- Subject line (if different from original)\n- Full email body\n- Brief explanation of the tone/style\n\nMake sure the replies:\n- Address the key points in the original email\n- Match the user's writing style\n- Are appropriate for the relationship with the sender\n- Sound natural and human-written\n\nFormat as JSON with keys: formal, casual, brief`;\n\nreturn [{\n  json: {\n    prompt: prompt,\n    originalEmail: originalEmail,\n    chatId: $input.first().json.chatId\n  }\n}];"
       },
       "name": "Build AI Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [850, 300]
+      "position": [
+        850,
+        300
+      ]
     },
     {
       "parameters": {
@@ -156,7 +104,10 @@ return [{
       "name": "Generate AI Replies",
       "type": "n8n-nodes-base.googlePaLmChatModel",
       "typeVersion": 1,
-      "position": [1050, 300],
+      "position": [
+        1050,
+        300
+      ],
       "credentials": {
         "googlePalmApi": {
           "id": "gemini-credentials",
@@ -166,63 +117,15 @@ return [{
     },
     {
       "parameters": {
-        "jsCode": "// Parse AI response into structured options
-const aiResponse = $input.first().json.response || $input.first().json.content;
-const chatId = $input.first().json.chatId;
-
-// Try to extract JSON from response
-let options = {};
-try {
-  // Find JSON in the response
-  const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    options = JSON.parse(jsonMatch[0]);
-  }
-} catch (e) {
-  console.log('Failed to parse JSON, using text fallback');
-}
-
-// Format for Telegram
-let message = '📧 **AI-Generated Reply Options**\n\n';
-message += 'Replying to: *' + ($input.first().json.originalEmail?.subject || 'Email') + '*\n\n';
-
-if (options.formal) {
-  message += '**1️⃣ FORMAL**\n';
-  message += options.formal.body || options.formal || 'Professional reply option\n';
-  message += '\n';
-}
-
-if (options.casual) {
-  message += '**2️⃣ CASUAL**\n';
-  message += options.casual.body || options.casual || 'Friendly reply option\n';
-  message += '\n';
-}
-
-if (options.brief) {
-  message += '**3️⃣ BRIEF**\n';
-  message += options.brief.body || options.brief || 'Short reply option\n';
-  message += '\n';
-}
-
-message += 'Reply with the number (1, 2, or 3) to send that option, or type "custom" to write your own.';
-
-// Store options for later retrieval
-const storeOptions = JSON.stringify(options);
-
-return [{
-  json: {
-    message: message,
-    options: storeOptions,
-    chatId: chatId,
-    originalEmailId: $input.first().json.originalEmail?.gmail_id,
-    threadId: $input.first().json.originalEmail?.thread_id
-  }
-}];"
+        "jsCode": "// Parse AI response into structured options\nconst aiResponse = $input.first().json.response || $input.first().json.content;\nconst chatId = $input.first().json.chatId;\n\n// Try to extract JSON from response\nlet options = {};\ntry {\n  // Find JSON in the response\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    options = JSON.parse(jsonMatch[0]);\n  }\n} catch (e) {\n  console.log('Failed to parse JSON, using text fallback');\n}\n\n// Format for Telegram\nlet message = '📧 **AI-Generated Reply Options**\\n\\n';\nmessage += 'Replying to: *' + ($input.first().json.originalEmail?.subject || 'Email') + '*\\n\\n';\n\nif (options.formal) {\n  message += '**1️⃣ FORMAL**\\n';\n  message += options.formal.body || options.formal || 'Professional reply option\\n';\n  message += '\\n';\n}\n\nif (options.casual) {\n  message += '**2️⃣ CASUAL**\\n';\n  message += options.casual.body || options.casual || 'Friendly reply option\\n';\n  message += '\\n';\n}\n\nif (options.brief) {\n  message += '**3️⃣ BRIEF**\\n';\n  message += options.brief.body || options.brief || 'Short reply option\\n';\n  message += '\\n';\n}\n\nmessage += 'Reply with the number (1, 2, or 3) to send that option, or type \"custom\" to write your own.';\n\n// Store options for later retrieval\nconst storeOptions = JSON.stringify(options);\n\nreturn [{\n  json: {\n    message: message,\n    options: storeOptions,\n    chatId: chatId,\n    originalEmailId: $input.first().json.originalEmail?.gmail_id,\n    threadId: $input.first().json.originalEmail?.thread_id\n  }\n}];"
       },
       "name": "Format Reply Options",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1250, 300]
+      "position": [
+        1250,
+        300
+      ]
     },
     {
       "parameters": {
@@ -235,7 +138,10 @@ return [{
       "name": "Send Reply Options",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.1,
-      "position": [1450, 300],
+      "position": [
+        1450,
+        300
+      ],
       "credentials": {
         "telegramApi": {
           "id": "telegram-credentials",
@@ -331,5 +237,11 @@ return [{
   "settings": {
     "executionOrder": "v1"
   },
-  "tags": ["ronkbot", "gmail", "email", "send", "ai"]
+  "tags": [
+    "ronkbot",
+    "gmail",
+    "email",
+    "send",
+    "ai"
+  ]
 }
