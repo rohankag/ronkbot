@@ -62,6 +62,10 @@
             {
               "value": "email",
               "output": 8
+            },
+            {
+              "value": "system",
+              "output": 9
             }
           ]
         }
@@ -77,7 +81,7 @@
     {
       "parameters": {
         "chatId": "={{ $json.chatId }}",
-        "text": "👋 Hey there! Here are the things I can help you with:\\n\\n💬 **Chat** - Just message me naturally\\n📊 **/status** - Check your Mac's system status\\n🧠 **/remember [fact]** - I'll remember something for you\\n💭 **/recall** - Show what I remember\\n🗑️ **/clear** - Clear conversation history\\n📁 **/read [filepath]** - Read a text file\\n📂 **/list [directory]** - List directory contents\\n⚡ **/exec [command]** - Run a safe command\\n\\n📧 **Email Commands:**\\n`/email auth` - Connect your Gmail account\\n`/email check` - Check unread emails\\n`/email read [id]` - Read a specific email\\n`/email reply [id]` - AI-powered reply drafts\\n`/email send` - Compose a new email\\n`/email search [query]` - Search your emails\\n\\nJust chat naturally or use any command above! 😊",
+        "text": "👋 Hey there! Here are the things I can help you with:\\n\\n💬 **Chat** - Just message me naturally\\n📊 **/status** - Check your Mac's system status\\n🧠 **/remember [fact]** - I'll remember something for you\\n💭 **/recall** - Show what I remember\\n🗑️ **/clear** - Clear conversation history\\n📁 **/read [filepath]** - Read a text file\\n📂 **/list [directory]** - List directory contents\\n⚡ **/exec [command]** - Run a safe command\\n\\n📧 **Email Commands:**\\n`/email auth` - Connect your Gmail account\\n`/email check` - Check unread emails\\n`/email read [id]` - Read a specific email\\n`/email reply [id]` - AI-powered reply drafts\\n`/email send` - Compose a new email\\n`/email search [query]` - Search your emails\\n\\n🔧 **System Control (owner only):**\\n`/system status` - Check if bot is running\\n`/system restart` - Restart ronkbot\\n`/system stop` - Stop ronkbot\\n`/system wake` - Check power/sleep status\\n\\nJust chat naturally or use any command above! 😊",
         "additionalFields": {
           "parse_mode": "Markdown"
         }
@@ -581,6 +585,235 @@
         1300,
         1050
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Security: only the owner can run /system commands\nconst ownerUsername = $env.TELEGRAM_OWNER_USERNAME || '';\nconst callerUsername = $input.first().json.username || '';\n\nif (!ownerUsername || callerUsername.toLowerCase() !== ownerUsername.toLowerCase()) {\n  return [{\n    json: {\n      ...$input.first().json,\n      accessDenied: true,\n      message: '\u26d4 Access denied. System commands are owner-only.'\n    }\n  }];\n}\n\nconst args = $input.first().json.args || '';\nconst parts = args.trim().split(' ');\nconst subcommand = (parts[0] || 'status').toLowerCase();\nconst subArgs = parts.slice(1).join(' ');\n\nreturn [{\n  json: {\n    ...$input.first().json,\n    accessDenied: false,\n    subcommand: subcommand,\n    subArgs: subArgs\n  }\n}];"
+      },
+      "name": "System Owner Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        850,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {}
+      },
+      "name": "System Access Denied",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        1050,
+        1100
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "ronku_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            {
+              "value": "access_denied",
+              "output": 0
+            },
+            {
+              "value": "status",
+              "output": 1
+            },
+            {
+              "value": "restart",
+              "output": 2
+            },
+            {
+              "value": "stop",
+              "output": 3
+            },
+            {
+              "value": "wake",
+              "output": 4
+            }
+          ]
+        },
+        "dataType": "string",
+        "value1": "={{ $json.accessDenied ? 'access_denied' : $json.subcommand }}"
+      },
+      "name": "Route System Subcommand",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [
+        1050,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "command": "docker ps --filter name=ronkbot --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}' 2>&1"
+      },
+      "name": "Docker Status",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        1150
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = $input.first().json.stdout || 'No output';\nconst running = output.includes('Up');\nconst icon = running ? '\u2705' : '\u26a0\ufe0f';\nconst msg = `${icon} *ronkbot Container Status*\\n\\n\\`\\`\\`\\n${output.trim()}\\`\\`\\``;\nreturn [{ json: { message: msg, chatId: $('System Owner Check').first().json.chatId } }];"
+      },
+      "name": "Format Docker Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1450,
+        1150
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Send System Status",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        1650,
+        1150
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "ronku_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "docker restart ronkbot-n8n 2>&1 && echo 'RESTART_OK' || echo 'RESTART_FAILED'"
+      },
+      "name": "Docker Restart",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        1250
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('System Owner Check').first().json.chatId }}",
+        "text": "\ud83d\udd04 *Restarting ronkbot...*\\n\\nI'll be back in ~30 seconds! Use `/system status` to check.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Send Restart Confirm",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        1450,
+        1250
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "ronku_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "docker stop ronkbot-n8n 2>&1 && echo 'STOP_OK' || echo 'STOP_FAILED'"
+      },
+      "name": "Docker Stop",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        1350
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('System Owner Check').first().json.chatId }}",
+        "text": "\ud83d\uded1 *ronkbot stopped.*\\n\\nTo restart from your iPhone, tap the *Start ronkbot* Shortcut or run:\\n`docker start ronkbot-n8n`",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Send Stop Confirm",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        1450,
+        1350
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "ronku_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "pmset -g batt 2>&1; echo '---'; pmset -g assertions 2>&1 | grep -E '(PreventSleep|PreventUserIdleSystem|NoIdleSleepAssertion)' | head -5"
+      },
+      "name": "Get Power Status",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        1450
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = $input.first().json.stdout || '';\nconst hasACPower = output.includes('AC Power') || output.includes('charged');\nconst hasSleepPrevention = output.includes('PreventSleep') || output.includes('NoIdleSleep');\nconst battLine = output.split('\\n').find(l => l.includes('%')) || 'Unknown';\n\nlet wakeStatus;\nif (hasACPower && hasSleepPrevention) {\n  wakeStatus = '\u2705 Mac is plugged in and sleep prevention is active. Bot will stay awake!';\n} else if (hasACPower) {\n  wakeStatus = '\u26a0\ufe0f On AC power but no sleep prevention detected.\\n\\nInstall *Amphetamine* (free) to stay awake with lid closed:\\nhttps://apps.apple.com/us/app/amphetamine/id937984704';\n} else {\n  wakeStatus = '\ud83d\udd0b On battery \u2014 Mac may sleep!\\n\\nPlug in + install *Amphetamine* (free) for always-on use:\\nhttps://apps.apple.com/us/app/amphetamine/id937984704';\n}\n\nconst msg = `\ud83d\udcf1 *Wake / Power Status*\\n\\n${wakeStatus}\\n\\n*Battery:* ${battLine.trim()}`;\nreturn [{ json: { message: msg, chatId: $('System Owner Check').first().json.chatId } }];"
+      },
+      "name": "Format Wake Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1450,
+        1450
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Send Wake Status",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        1650,
+        1450
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "ronku_bot"
+        }
+      }
     }
   ],
   "connections": {
@@ -654,6 +887,13 @@
         [
           {
             "node": "Parse Email Subcommand",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "System Owner Check",
             "type": "main",
             "index": 0
           }
@@ -788,6 +1028,122 @@
         [
           {
             "node": "Search Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "System Owner Check": {
+      "main": [
+        [
+          {
+            "node": "Route System Subcommand",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route System Subcommand": {
+      "main": [
+        [
+          {
+            "node": "System Access Denied",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Docker Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Docker Restart",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Docker Stop",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Power Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Docker Status": {
+      "main": [
+        [
+          {
+            "node": "Format Docker Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Docker Status": {
+      "main": [
+        [
+          {
+            "node": "Send System Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Docker Restart": {
+      "main": [
+        [
+          {
+            "node": "Send Restart Confirm",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Docker Stop": {
+      "main": [
+        [
+          {
+            "node": "Send Stop Confirm",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Power Status": {
+      "main": [
+        [
+          {
+            "node": "Format Wake Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Wake Status": {
+      "main": [
+        [
+          {
+            "node": "Send Wake Status",
             "type": "main",
             "index": 0
           }

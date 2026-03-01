@@ -552,4 +552,108 @@ Analyze your writing style from sent emails. Used to personalize AI replies.
 
 ---
 
+## 🔧 /system — Remote Control (Owner Only)
+
+Control the ronkbot container directly from Telegram. All subcommands are restricted to the owner only (`TELEGRAM_OWNER_USERNAME`).
+
+### /system status
+
+Check whether the ronkbot Docker container is running.
+
+```
+/system status
+```
+
+**Response:**
+
+```
+✅ ronkbot Container Status
+
+NAMES           STATUS          PORTS
+ronkbot-n8n     Up 3 hours      0.0.0.0:5678->5678/tcp
+```
+
+### /system restart
+
+Gracefully restart the ronkbot container. The bot will go offline for ~30 seconds.
+
+```
+/system restart
+```
+
+**Response:**
+
+```
+🔄 Restarting ronkbot...
+
+I'll be back in ~30 seconds! Use /system status to check.
+```
+
+### /system stop
+
+Stop the ronkbot container. To bring it back, use the **Start ronkbot** iOS Shortcut or run `docker start ronkbot-n8n` on the Mac.
+
+```
+/system stop
+```
+
+**Response:**
+
+```
+🛑 ronkbot stopped.
+
+To restart from your iPhone, tap the Start ronkbot Shortcut
+or run: docker start ronkbot-n8n
+```
+
+### /system wake
+
+Check the Mac's power/sleep status — tells you if the Mac will stay awake when the lid is closed.
+
+```
+/system wake
+```
+
+**Response (examples):**
+
+```
+📱 Wake / Power Status
+
+✅ Mac is plugged in and sleep prevention is active. Bot will stay awake!
+
+Battery: Now drawing from 'AC Power'; 100% charged
+```
+
+or
+
+```
+📱 Wake / Power Status
+
+⚠️ On AC power but no sleep prevention detected.
+
+Install Amphetamine (free) to stay awake with lid closed:
+https://apps.apple.com/us/app/amphetamine/id937984704
+
+Battery: Now drawing from 'AC Power'; 87% charged
+```
+
+### Security
+
+- All `/system` commands check that the caller's Telegram username matches `TELEGRAM_OWNER_USERNAME` in your `.env` file.
+- Non-owners see: `⛔ Access denied. System commands are owner-only.`
+
+### iPhone Remote Start Setup
+
+To start ronkbot from your iPhone when it's stopped, run once on the Mac:
+
+```bash
+bash scripts/create-shortcut.sh
+```
+
+This creates a **Start ronkbot** Shortcut that syncs to your iPhone via iCloud. Add it to your Home Screen for one-tap access.
+
+> **Keep your Mac awake:** Install [Amphetamine](https://apps.apple.com/us/app/amphetamine/id937984704) (free, Mac App Store) to stay awake with the lid closed.
+
+---
+
 **Remember:** When in doubt, just ask naturally! 🤖

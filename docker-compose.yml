@@ -26,6 +26,7 @@ services:
       - ./data/n8n:/home/node/.n8n
       - ./data/sqlite:/home/node/.n8n/database
       - ./n8n-workflows:/home/node/.n8n/workflows
+      - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:5678/healthz"]
       interval: 30s

@@ -423,6 +423,41 @@ MIT License - feel free to use this for personal or commercial projects.
 
 ---
 
+## 📱 Remote Control from iPhone
+
+Control ronkbot from your iPhone via Telegram:
+
+| Command | What it does |
+|---------|-------------|
+| `/system status` | Check if bot is running |
+| `/system restart` | Restart the container (~30s downtime) |
+| `/system stop` | Stop the bot |
+| `/system wake` | Check Mac power/sleep status |
+
+> **Owner only** — commands are restricted to `TELEGRAM_OWNER_USERNAME`.
+
+### Starting ronkbot from iPhone
+
+When the bot is stopped, start it with one tap using a macOS Shortcut:
+
+```bash
+bash scripts/create-shortcut.sh
+```
+
+This creates a **Start ronkbot** Shortcut that syncs to your iPhone via iCloud. Long-press it → **Add to Home Screen** for one-tap startup.
+
+### Lid Closed Operation
+
+By default, closing your MacBook lid puts it to sleep (pausing ronkbot). To keep it awake:
+
+1. **Plug in** your Mac to power
+2. Install [**Amphetamine**](https://apps.apple.com/us/app/amphetamine/id937984704) (free, Mac App Store)
+3. Enable "Keep Awake" → check **Closed Lid Support**
+
+Run `/system wake` from your iPhone anytime to check the current sleep status.
+
+---
+
 ## 💖 Acknowledgments
 
 - [n8n](https://n8n.io/) - Workflow automation platform
