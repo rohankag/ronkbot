@@ -1,11 +1,14 @@
 FROM n8nio/n8n:latest
 
-LABEL maintainer="ronkbot"
-LABEL description="Personal AI Assistant with Telegram and Gemini"
+LABEL maintainer="rohankag"
+LABEL description="Personal AI Assistant — Telegram + n8n + Gemini"
+LABEL org.opencontainers.image.source="https://github.com/rohankag/ronkbot"
+LABEL org.opencontainers.image.licenses="MIT"
 
-# n8n runs as `node` user — no additional system packages needed.
-# n8n's hardened image has apk removed; workflows and scripts are
-# mounted via docker-compose volumes at runtime.
+# Copy pre-built workflows so they're available inside the container without
+# needing a host volume mount. Users who want to customise workflows can still
+# override by mounting their own directory at /home/node/.n8n/workflows.
+COPY --chown=node:node n8n-workflows/ /home/node/.n8n/workflows/
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \

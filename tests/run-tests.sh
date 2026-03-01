@@ -40,8 +40,9 @@ echo "╔═══════════════════════�
 echo "║          ronkbot CI Test Suite               ║"
 echo "╚══════════════════════════════════════════════╝"
 
-run_test "JSON Validation"         "${SCRIPT_DIR}/test-json-valid.sh"
-run_test "ShellCheck Lint"         "${SCRIPT_DIR}/test-shellcheck.sh"
+run_test "JSON Validation"              "${SCRIPT_DIR}/test-json-valid.sh"
+run_test "ShellCheck Lint"              "${SCRIPT_DIR}/test-shellcheck.sh"
+run_test "Email Workflow Structure"     "${SCRIPT_DIR}/test-email-workflow-structure.sh"
 
 if [ "${SKIP_DOCKER}" = "false" ]; then
     run_test "Docker Build"        "${SCRIPT_DIR}/test-docker-build.sh"

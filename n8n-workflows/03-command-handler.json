@@ -58,6 +58,10 @@
             {
               "value": "exec",
               "output": 7
+            },
+            {
+              "value": "email",
+              "output": 8
             }
           ]
         }
@@ -73,7 +77,7 @@
     {
       "parameters": {
         "chatId": "={{ $json.chatId }}",
-        "text": "👋 Hey there! Here are the things I can help you with:\\n\\n💬 **Chat** - Just message me naturally\\n📊 **/status** - Check your Mac's system status\\n🧠 **/remember [fact]** - I'll remember something for you\\n💭 **/recall** - Show what I remember\\n🗑️ **/clear** - Clear conversation history\\n📁 **/read [filepath]** - Read a text file\\n📂 **/list [directory]** - List directory contents\\n⚡ **/exec [command]** - Run a safe command\\n\\nJust chat naturally or use any command above! 😊",
+        "text": "👋 Hey there! Here are the things I can help you with:\\n\\n💬 **Chat** - Just message me naturally\\n📊 **/status** - Check your Mac's system status\\n🧠 **/remember [fact]** - I'll remember something for you\\n💭 **/recall** - Show what I remember\\n🗑️ **/clear** - Clear conversation history\\n📁 **/read [filepath]** - Read a text file\\n📂 **/list [directory]** - List directory contents\\n⚡ **/exec [command]** - Run a safe command\\n\\n📧 **Email Commands:**\\n`/email auth` - Connect your Gmail account\\n`/email check` - Check unread emails\\n`/email read [id]` - Read a specific email\\n`/email reply [id]` - AI-powered reply drafts\\n`/email send` - Compose a new email\\n`/email search [query]` - Search your emails\\n\\nJust chat naturally or use any command above! 😊",
         "additionalFields": {
           "parse_mode": "Markdown"
         }
@@ -190,7 +194,7 @@
     {
       "parameters": {
         "chatId": "={{ $json.chatId }}",
-        "text": "✅ Got it! I'll remember that:\\n\\n\"{{ $json.args }}\"\\n\\n💡 Use /recall to see everything I remember!",
+        "text": "✅ Got it! I'll remember that:\\\\n\\\\n\\\"{{ $json.args }}\\\"\\\\n\\\\n💡 Use /recall to see everything I remember!",
         "additionalFields": {}
       },
       "name": "Confirm Remember",
@@ -298,7 +302,7 @@
     {
       "parameters": {
         "chatId": "={{ $json.chatId }}",
-        "text": "🧹 **Conversation history cleared!**\\n\\nI'm starting fresh. What would you like to talk about? 😊",
+        "text": "🧹 **Conversation history cleared!**\\\\n\\\\nI'm starting fresh. What would you like to talk about? 😊",
         "additionalFields": {
           "parse_mode": "Markdown"
         }
@@ -316,6 +320,267 @@
           "name": "ronku_bot"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse email subcommand from args\n// Format: /email <subcommand> [args...]\n// e.g.  /email check\n//        /email read abc123\n//        /email reply abc123\n//        /email send\n//        /email search invoice\n//        /email auth\n\nconst args = $input.first().json.args || '';\nconst parts = args.trim().split(' ');\nconst subcommand = (parts[0] || 'check').toLowerCase();\nconst subArgs = parts.slice(1).join(' ');\n\nreturn [{\n  json: {\n    ...$input.first().json,\n    subcommand: subcommand,\n    subArgs: subArgs\n  }\n}];"
+      },
+      "name": "Parse Email Subcommand",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        850,
+        750
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            {
+              "value": "auth",
+              "output": 0
+            },
+            {
+              "value": "check",
+              "output": 1
+            },
+            {
+              "value": "read",
+              "output": 2
+            },
+            {
+              "value": "reply",
+              "output": 3
+            },
+            {
+              "value": "send",
+              "output": 4
+            },
+            {
+              "value": "search",
+              "output": 5
+            }
+          ]
+        }
+      },
+      "name": "Route Email Subcommand",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [
+        1050,
+        750
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "🔐 **Connect Your Gmail Account**\\n\\nClick the link below to authorize ronkbot:\\n\\n`http://localhost:5678/gmail-auth`\\n\\n**Steps:**\\n1. Click the link above (open in browser)\\n2. Sign in with your Google account\\n3. Grant the requested permissions\\n4. You'll see a success message\\n\\nAfter connecting, use `/email check` to see your emails! 📧\\n\\n⚠️ Make sure you've set up Gmail credentials in your `.env` file first. See `docs/EMAIL_SETUP.md` for details.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Email Auth Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        1300,
+        550
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "ronku_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": "05 - Email Reader",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "chatId",
+              "stringValue": "={{ $json.chatId }}"
+            },
+            {
+              "name": "userId",
+              "stringValue": "={{ $json.userId }}"
+            },
+            {
+              "name": "username",
+              "stringValue": "={{ $json.username }}"
+            },
+            {
+              "name": "mode",
+              "stringValue": "check"
+            },
+            {
+              "name": "limit",
+              "stringValue": "10"
+            },
+            {
+              "name": "label",
+              "stringValue": "INBOX"
+            },
+            {
+              "name": "searchQuery",
+              "stringValue": "is:unread"
+            }
+          ]
+        }
+      },
+      "name": "Check Emails",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1300,
+        650
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": "05 - Email Reader",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "chatId",
+              "stringValue": "={{ $json.chatId }}"
+            },
+            {
+              "name": "userId",
+              "stringValue": "={{ $json.userId }}"
+            },
+            {
+              "name": "username",
+              "stringValue": "={{ $json.username }}"
+            },
+            {
+              "name": "mode",
+              "stringValue": "read"
+            },
+            {
+              "name": "emailId",
+              "stringValue": "={{ $json.subArgs }}"
+            }
+          ]
+        }
+      },
+      "name": "Read Email",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1300,
+        750
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": "06 - Email Sender",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "chatId",
+              "stringValue": "={{ $json.chatId }}"
+            },
+            {
+              "name": "userId",
+              "stringValue": "={{ $json.userId }}"
+            },
+            {
+              "name": "username",
+              "stringValue": "={{ $json.username }}"
+            },
+            {
+              "name": "mode",
+              "stringValue": "reply"
+            },
+            {
+              "name": "emailId",
+              "stringValue": "={{ $json.subArgs }}"
+            }
+          ]
+        }
+      },
+      "name": "Reply Email",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1300,
+        850
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": "06 - Email Sender",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "chatId",
+              "stringValue": "={{ $json.chatId }}"
+            },
+            {
+              "name": "userId",
+              "stringValue": "={{ $json.userId }}"
+            },
+            {
+              "name": "username",
+              "stringValue": "={{ $json.username }}"
+            },
+            {
+              "name": "mode",
+              "stringValue": "compose"
+            }
+          ]
+        }
+      },
+      "name": "Send Email",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1300,
+        950
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": "05 - Email Reader",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "chatId",
+              "stringValue": "={{ $json.chatId }}"
+            },
+            {
+              "name": "userId",
+              "stringValue": "={{ $json.userId }}"
+            },
+            {
+              "name": "username",
+              "stringValue": "={{ $json.username }}"
+            },
+            {
+              "name": "mode",
+              "stringValue": "search"
+            },
+            {
+              "name": "limit",
+              "stringValue": "10"
+            },
+            {
+              "name": "searchQuery",
+              "stringValue": "={{ $json.subArgs }}"
+            }
+          ]
+        }
+      },
+      "name": "Search Emails",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1300,
+        1050
+      ]
     }
   ],
   "connections": {
@@ -379,6 +644,16 @@
         [
           {
             "node": "Clear History",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        [],
+        [],
+        [
+          {
+            "node": "Parse Email Subcommand",
             "type": "main",
             "index": 0
           }
@@ -456,6 +731,63 @@
         [
           {
             "node": "Confirm Clear",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Email Subcommand": {
+      "main": [
+        [
+          {
+            "node": "Route Email Subcommand",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Email Subcommand": {
+      "main": [
+        [
+          {
+            "node": "Email Auth Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Emails",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search Emails",
             "type": "main",
             "index": 0
           }

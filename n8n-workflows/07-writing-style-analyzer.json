@@ -1,0 +1,385 @@
+{
+    "name": "07 - Writing Style Analyzer",
+    "nodes": [
+        {
+            "parameters": {},
+            "name": "Execute Workflow Trigger",
+            "type": "n8n-nodes-base.executeWorkflowTrigger",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "SELECT access_token FROM gmail_tokens WHERE user_id = $1 AND expires_at > datetime('now')",
+                "additionalFields": {
+                    "parameters": [
+                        {
+                            "name": "user_id",
+                            "value": "={{ $json.userId }}"
+                        }
+                    ]
+                }
+            },
+            "name": "Get Access Token",
+            "type": "n8n-nodes-base.sqlite",
+            "typeVersion": 2.2,
+            "position": [
+                450,
+                300
+            ],
+            "credentials": {
+                "sqlite": {
+                    "id": "ronkbot-db",
+                    "name": "ronkbot Database"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// Check if token was found\nconst token = $input.first().json.access_token;\nif (!token) {\n  return [{\n    json: {\n      error: true,\n      message: '❌ No Gmail token found. Please run `/email auth` first to connect your Gmail account.',\n      chatId: $('Execute Workflow Trigger').first().json.chatId\n    }\n  }];\n}\nreturn [{ json: { access_token: token, userId: $('Execute Workflow Trigger').first().json.userId, chatId: $('Execute Workflow Trigger').first().json.chatId } }];"
+            },
+            "name": "Check Token",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                650,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "maxResults",
+                            "value": "50"
+                        },
+                        {
+                            "name": "labelIds",
+                            "value": "SENT"
+                        }
+                    ]
+                },
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{ $json.access_token }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "Fetch Sent Messages",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                850,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Extract message IDs to fetch\nconst messages = $input.first().json.messages || [];\nif (messages.length === 0) {\n  return [{ json: { noMessages: true, messages: [] } }];\n}\n// Return first 20 to avoid rate limits; enough for style analysis\nreturn messages.slice(0, 20).map(m => ({ json: { id: m.id } }));"
+            },
+            "name": "List Sent IDs",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1050,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "={{ 'https://gmail.googleapis.com/gmail/v1/users/me/messages/' + $json.id + '?format=full' }}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{ $('Check Token').first().json.access_token }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "Fetch Sent Email",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                1250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Extract plain-text body from each fetched email\nfunction decodeBody(parts) {\n  if (!parts) return '';\n  for (const part of parts) {\n    if (part.mimeType === 'text/plain' && part.body && part.body.data) {\n      return Buffer.from(part.body.data, 'base64').toString('utf-8');\n    }\n    if (part.parts) {\n      const inner = decodeBody(part.parts);\n      if (inner) return inner;\n    }\n  }\n  return '';\n}\n\nconst email = $input.first().json;\nlet bodyText = '';\nif (email.payload) {\n  if (email.payload.parts) {\n    bodyText = decodeBody(email.payload.parts);\n  } else if (email.payload.body && email.payload.body.data) {\n    bodyText = Buffer.from(email.payload.body.data, 'base64').toString('utf-8');\n  }\n}\n\n// Clamp to 500 chars per email to keep Gemini prompt manageable\nreturn [{ json: { body: bodyText.substring(0, 500).trim() } }];"
+            },
+            "name": "Extract Body Text",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Aggregate all email bodies into a single prompt\nconst bodies = $input.all().map((item, i) => `--- Email ${i + 1} ---\\n${item.json.body}`).join('\\n\\n');\n\nreturn [{\n  json: {\n    aggregatedBodies: bodies,\n    userId: $('Execute Workflow Trigger').first().json.userId,\n    chatId: $('Execute Workflow Trigger').first().json.chatId\n  }\n}];"
+            },
+            "name": "Aggregate Emails",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1650,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{ $env.GEMINI_MODEL || 'gemini-2.0-flash' }}:generateContent?key={{ $env.GEMINI_API_KEY }}",
+                "sendBody": true,
+                "contentType": "json",
+                "body": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Analyze the following sent emails and return ONLY a JSON object (no markdown, no explanation) with these fields:\\n- formality_score: number 0.0 (very casual) to 1.0 (very formal)\\n- common_greetings: array of up to 3 strings the sender uses to open emails\\n- common_signoffs: array of up to 3 strings the sender uses to close emails\\n- avg_sentence_length: 'short' | 'medium' | 'long'\\n- tone: 'direct' | 'warm' | 'professional' | 'casual'\\n- writing_patterns: array of up to 5 short descriptive strings about the sender's style\\n\\nEmails:\\n{{ $json.aggregatedBodies }}\"\n    }]\n  }]\n}",
+                "options": {}
+            },
+            "name": "Gemini Style Analysis",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                1850,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Parse Gemini response and extract the JSON style object\nconst response = $input.first().json;\nlet styleData = {};\n\ntry {\n  const rawText = response.candidates[0].content.parts[0].text;\n  // Strip any accidental markdown code fences\n  const cleaned = rawText.replace(/```json\\n?/g, '').replace(/```/g, '').trim();\n  styleData = JSON.parse(cleaned);\n} catch (e) {\n  // fallback defaults\n  styleData = {\n    formality_score: 0.5,\n    common_greetings: ['Hi', 'Hello'],\n    common_signoffs: ['Thanks', 'Best'],\n    avg_sentence_length: 'medium',\n    tone: 'professional',\n    writing_patterns: ['Unable to analyze — defaulting to neutral style']\n  };\n}\n\nreturn [{\n  json: {\n    userId: $('Aggregate Emails').first().json.userId,\n    chatId: $('Aggregate Emails').first().json.chatId,\n    formality_score: styleData.formality_score,\n    common_greetings: JSON.stringify(styleData.common_greetings || []),\n    common_signoffs: JSON.stringify(styleData.common_signoffs || []),\n    avg_sentence_length: styleData.avg_sentence_length || 'medium',\n    tone: styleData.tone || 'professional',\n    writing_patterns: JSON.stringify(styleData.writing_patterns || []),\n    displayFormality: Math.round((styleData.formality_score || 0.5) * 100),\n    displayTone: styleData.tone || 'professional',\n    displayGreetings: (styleData.common_greetings || []).join(', '),\n    displaySignoffs: (styleData.common_signoffs || []).join(', ')\n  }\n}];"
+            },
+            "name": "Parse Style Result",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                2050,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "INSERT INTO writing_style (user_id, formality_score, common_greetings, common_signoffs, avg_sentence_length, tone, writing_patterns, analyzed_at) VALUES ($1, $2, $3, $4, $5, $6, $7, datetime('now')) ON CONFLICT(user_id) DO UPDATE SET formality_score=excluded.formality_score, common_greetings=excluded.common_greetings, common_signoffs=excluded.common_signoffs, avg_sentence_length=excluded.avg_sentence_length, tone=excluded.tone, writing_patterns=excluded.writing_patterns, analyzed_at=excluded.analyzed_at",
+                "additionalFields": {
+                    "parameters": [
+                        {
+                            "name": "user_id",
+                            "value": "={{ $json.userId }}"
+                        },
+                        {
+                            "name": "formality_score",
+                            "value": "={{ $json.formality_score }}"
+                        },
+                        {
+                            "name": "common_greetings",
+                            "value": "={{ $json.common_greetings }}"
+                        },
+                        {
+                            "name": "common_signoffs",
+                            "value": "={{ $json.common_signoffs }}"
+                        },
+                        {
+                            "name": "avg_sentence_length",
+                            "value": "={{ $json.avg_sentence_length }}"
+                        },
+                        {
+                            "name": "tone",
+                            "value": "={{ $json.tone }}"
+                        },
+                        {
+                            "name": "writing_patterns",
+                            "value": "={{ $json.writing_patterns }}"
+                        }
+                    ]
+                }
+            },
+            "name": "Save Writing Style",
+            "type": "n8n-nodes-base.sqlite",
+            "typeVersion": 2.2,
+            "position": [
+                2250,
+                300
+            ],
+            "credentials": {
+                "sqlite": {
+                    "id": "ronkbot-db",
+                    "name": "ronkbot Database"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "chatId": "={{ $('Parse Style Result').first().json.chatId }}",
+                "text": "✅ **Writing Style Analysis Complete!**\n\n📊 **Your Style Profile:**\n\n🎯 **Formality:** {{ $('Parse Style Result').first().json.displayFormality }}% formal\n🎭 **Tone:** {{ $('Parse Style Result').first().json.displayTone }}\n👋 **Greetings:** {{ $('Parse Style Result').first().json.displayGreetings }}\n✍️ **Sign-offs:** {{ $('Parse Style Result').first().json.displaySignoffs }}\n\nronkbot will now use this profile when generating email replies for you! 🤖\n\nRe-run analysis anytime with `/email analyze`",
+                "additionalFields": {
+                    "parse_mode": "Markdown"
+                }
+            },
+            "name": "Style Analysis Confirm",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.1,
+            "position": [
+                2450,
+                300
+            ],
+            "credentials": {
+                "telegramApi": {
+                    "id": "telegram-credentials",
+                    "name": "ronku_bot"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Execute Workflow Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Get Access Token",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Access Token": {
+            "main": [
+                [
+                    {
+                        "node": "Check Token",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Check Token": {
+            "main": [
+                [
+                    {
+                        "node": "Fetch Sent Messages",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Fetch Sent Messages": {
+            "main": [
+                [
+                    {
+                        "node": "List Sent IDs",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "List Sent IDs": {
+            "main": [
+                [
+                    {
+                        "node": "Fetch Sent Email",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Fetch Sent Email": {
+            "main": [
+                [
+                    {
+                        "node": "Extract Body Text",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extract Body Text": {
+            "main": [
+                [
+                    {
+                        "node": "Aggregate Emails",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Aggregate Emails": {
+            "main": [
+                [
+                    {
+                        "node": "Gemini Style Analysis",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gemini Style Analysis": {
+            "main": [
+                [
+                    {
+                        "node": "Parse Style Result",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Parse Style Result": {
+            "main": [
+                [
+                    {
+                        "node": "Save Writing Style",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Save Writing Style": {
+            "main": [
+                [
+                    {
+                        "node": "Style Analysis Confirm",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "staticData": null,
+    "tags": [
+        "ronkbot",
+        "gmail",
+        "email",
+        "ai",
+        "style"
+    ]
+}
