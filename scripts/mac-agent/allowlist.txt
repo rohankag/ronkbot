@@ -1,0 +1,81 @@
+# ronkbot mac-agent allowlist
+# Each line is a regex pattern. Commands must match at least one to execute.
+# Lines starting with # are comments.
+# If this file is empty, all commands are allowed (except blocked patterns).
+
+# ── System info (read-only) ──────────────────────────────────────────────────
+^(date|cal|uptime|whoami|hostname|sw_vers|uname|arch)$
+^df\b
+^du\b
+^ls\b
+^cat\b
+^head\b
+^tail\b
+^wc\b
+^pwd$
+^which\b
+^echo\b
+^env$
+^printenv\b
+^ps\s+(aux|ef)
+^top\s+-l\s+1
+^diskutil\s+list
+^system_profiler\b
+^sysctl\b
+^vm_stat\b
+^memory_pressure$
+^pmset\b
+^ioreg\b
+^launchctl\s+(list|print)
+^defaults\s+read\b
+^sw_vers\b
+^free\b
+^id$
+
+# ── Network ──────────────────────────────────────────────────────────────────
+^ping\s+-c\s+\d
+^curl\s+(-s\s+)?(https?://|wttr\.in)
+^dig\b
+^nslookup\b
+^ifconfig$
+^networksetup\b.*-getinfo
+
+# ── Git (read + pull) ────────────────────────────────────────────────────────
+^git\s+(status|log|diff|branch|remote|pull|fetch|rev-parse|show)
+^git\s+log\s+--oneline
+
+# ── Development ──────────────────────────────────────────────────────────────
+^python3?\s+(-c|--version)
+^node\s+(-e|--version|-v)
+^npm\s+(list|ls|outdated|run\s+\w+|version)
+^brew\s+(list|info|outdated|doctor|config)
+^pip3?\s+(list|show|freeze)
+
+# ── File operations ──────────────────────────────────────────────────────────
+^find\b
+^grep\b
+^rg\b
+^fd\b
+^tree\b
+^stat\b
+^file\b
+^md5\b
+^shasum\b
+^realpath\b
+^basename\b
+^dirname\b
+^mkdir\s+-p\b
+
+# ── App control ──────────────────────────────────────────────────────────────
+^open\s+(-a\s+|https?://)
+^osascript\b
+^killall\b
+^pmset\s+sleepnow
+
+# ── Project scripts (user's coding dirs) ─────────────────────────────────────
+^(npm|python3?|bash|sh|make)\s+.*(projects|coding)/
+^cd\s+.*(projects|coding)/
+
+# ── Weather / quick utilities ────────────────────────────────────────────────
+^curl\s+-s\s+wttr\.in
+^say\b

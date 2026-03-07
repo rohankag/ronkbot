@@ -87,6 +87,24 @@ jobs:
       - name: Run system workflow structure tests
         run: bash tests/test-system-workflow-structure.sh
 
+  python-unit-tests:
+    name: Python Unit Tests — brain & watchdog
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install pytest requests -r scripts/mac-agent/requirements.txt
+
+      - name: Run unit tests
+        run: pytest tests/test_brain_todos.py tests/test_watchdog.py -v
+        env:
+          PYTHONPATH: scripts/mac-agent
+
   all-ci:
     name: CI — All Checks
     runs-on: ubuntu-latest
@@ -98,6 +116,7 @@ jobs:
         installer-smoke,
         email-workflow-structure,
         system-workflow-structure,
+        python-unit-tests,
       ]
     if: always()
     steps:

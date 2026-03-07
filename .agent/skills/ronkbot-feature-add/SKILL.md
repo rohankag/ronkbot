@@ -225,12 +225,66 @@ Always default to `false` for optional features so the bot still works without t
 
 ---
 
+## 7. Security Safeguards
+
+### Never expose secrets
+
+- **Never embed API keys** directly in workflow JSON. Use `$env.VAR_NAME` expressions.
+- **Never log full messages** to external services when sensitive content is detected.
+- **Never send sensitive data to cloud AI providers**. The Safety Check node in `02-gemini-chat.json` detects patterns like API keys, passwords, SSNs, and credit card numbers, and routes them to Ollama (local) only.
+
+### Sensitive content detection patterns
+
+The following patterns trigger local-only (Ollama) routing:
+
+| Pattern | Example |
+|---------|---------|
+| API key prefixes | `ghp_`, `gsk_`, `sk-`, `AIzaSy`, `xoxb-`, `AKIA` |
+| Password mentions | `password is ...`, `pwd = ...` |
+| Credit card numbers | `4111 1111 1111 1111` |
+| SSN format | `123-45-6789` |
+| Store secret | `remember my token ...`, `save my key ...` |
+| Private keys | `-----BEGIN RSA PRIVATE KEY-----` |
+
+### Provider trust tiers
+
+| Tier | Provider | When used |
+|------|----------|-----------|
+| 🟢 Trusted (local) | Ollama `llama3.3:70b` | Sensitive content, `/private` mode |
+| 🟡 Cloud (general) | GitHub Models, Groq, Gemini | Normal chat (fallback order) |
+
+### Audit logging
+
+All AI calls are logged locally in Docker container logs with the `[AUDIT]` prefix:
+
+```
+[AUDIT] 2026-03-02T02:26:00Z | GitHub Models | "hey does this work..." | sensitive:false
+[AUDIT] 2026-03-02T02:28:00Z | Ollama (local-private) | [SENSITIVE-REDACTED] | sensitive:true
+```
+
+### Access control
+
+- The `01-telegram-listener.json` workflow checks `TELEGRAM_OWNER_USERNAME` from `.env`
+- Non-owner messages get `⛔ This bot is private. Access denied.`
+- Never remove the `Is Owner?` gate node
+
+### Webhook configuration
+
+- The listener uses a **Webhook node** (not TelegramTrigger) at path `/webhook/telegram-bot-webhook`
+- After any Docker restart, the Telegram webhook must be re-set:
+
+  ```bash
+  curl "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook?url=$NGROK_URL/webhook/telegram-bot-webhook"
+  ```
+
+---
+
 ## Quick Reference: Key Files
 
 | Purpose | File |
 |---------|------|
 | Main command router | `n8n-workflows/03-command-handler.json` |
-| Gemini chat | `n8n-workflows/02-gemini-chat.json` |
+| AI fallback + safety | `n8n-workflows/02-gemini-chat.json` |
 | Telegram listener | `n8n-workflows/01-telegram-listener.json` |
 | All tests | `tests/run-tests.sh` |
 | JSON validation | `tests/test-json-valid.sh` |

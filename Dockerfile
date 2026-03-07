@@ -1,4 +1,4 @@
-FROM n8nio/n8n:latest
+FROM n8nio/n8n:1.82.1
 
 LABEL maintainer="rohankag"
 LABEL description="Personal AI Assistant — Telegram + n8n + Gemini"

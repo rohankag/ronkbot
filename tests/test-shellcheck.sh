@@ -19,6 +19,10 @@ SHELL_FILES=(
     "${REPO_ROOT}/tests/test-json-valid.sh"
     "${REPO_ROOT}/tests/test-shellcheck.sh"
     "${REPO_ROOT}/tests/test-docker-build.sh"
+    "${REPO_ROOT}/scripts/entrypoint.sh"
+    "${REPO_ROOT}/scripts/set-webhook.sh"
+    "${REPO_ROOT}/scripts/start-ronkbot.sh"
+    "${REPO_ROOT}/scripts/startup.sh"
 )
 
 # Verify shellcheck is available

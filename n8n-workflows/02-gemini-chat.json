@@ -1,257 +1,416 @@
 {
-  "name": "02 - Gemini Chat",
+  "name": "02 - AI Agent Chat",
   "nodes": [
     {
-      "parameters": {},
-      "name": "Execute Workflow Trigger",
+      "id": "n0",
+      "name": "Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [250, 300]
+      "position": [
+        100,
+        300
+      ],
+      "parameters": {}
     },
     {
+      "id": "n1",
+      "name": "Get Brain Context",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        320,
+        300
+      ],
       "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT user_message, ai_response, timestamp FROM conversations WHERE user_id = $1 ORDER BY timestamp DESC LIMIT 5",
-        "additionalFields": {
+        "method": "GET",
+        "url": "=http://host.docker.internal:4242/brain/context",
+        "sendQuery": true,
+        "queryParameters": {
           "parameters": [
             {
-              "name": "user_id",
-              "value": "={{ $json.userId }}"
-            }
-          ]
-        }
-      },
-      "name": "Get Conversation History",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.2,
-      "position": [450, 200],
-      "credentials": {
-        "postgres": {
-          "id": "sqlite-credentials",
-          "name": "ronku-bot-db"
-        }
-      },
-      "continueOnFail": true
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT fact, category FROM memory WHERE user_id = $1 ORDER BY timestamp DESC",
-        "additionalFields": {
-          "parameters": [
+              "name": "chat_id",
+              "value": "={{ $json.chatId }}"
+            },
             {
-              "name": "user_id",
-              "value": "={{ $json.userId }}"
+              "name": "message",
+              "value": "={{ encodeURIComponent($json.message) }}"
             }
           ]
-        }
-      },
-      "name": "Get User Memory",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.2,
-      "position": [450, 400],
-      "credentials": {
-        "postgres": {
-          "id": "sqlite-credentials",
-          "name": "ronku-bot-db"
-        }
-      },
-      "continueOnFail": true
-    },
-    {
-      "parameters": {
-        "jsCode": "// Build the AI prompt with personality and context\nconst userMessage = $input.first().json.text;\nconst username = $input.first().json.username;\n\n// System prompt with warm, conversational personality\nconst systemPrompt = `You are ronku_bot, a warm and conversational AI assistant running on @ronkuwonku's Mac.\n\nYour personality: Friendly, helpful, conversational. Use a warm, casual tone like chatting with a friend. Be concise but personable.\n\nYou have access to the user's Mac and can help with:\n- Answering questions\n- Running safe system commands\n- Remembering facts\n- Reading files\n- Having friendly conversations\n\nCurrent time: ${new Date().toLocaleString()}\nUser: @${username}`;\n\n// Get conversation history (if available)\nlet historyText = '';\nconst historyItems = $('Get Conversation History').all();\nif (historyItems && historyItems.length > 0) {\n  historyText = '\\n\\nRecent conversation history:\\n';\n  historyItems.reverse().forEach(item => {\n    historyText += `User: ${item.json.user_message}\\nAssistant: ${item.json.ai_response}\\n\\n`;\n  });\n}\n\n// Get user memory (if available)\nlet memoryText = '';\nconst memoryItems = $('Get User Memory').all();\nif (memoryItems && memoryItems.length > 0) {\n  memoryText = '\\n\\nThings I remember about you:\\n';\n  memoryItems.forEach(item => {\n    memoryText += `- ${item.json.fact}\\n`;\n  });\n}\n\n// Build full prompt\nconst fullPrompt = `${systemPrompt}${memoryText}${historyText}\\n\\nUser message: ${userMessage}\\n\\nRespond warmly and helpfully:`;\n\nreturn [{\n  json: {\n    prompt: fullPrompt,\n    userMessage: userMessage,\n    chatId: $input.first().json.chatId,\n    userId: $input.first().json.userId\n  }\n}];"
-      },
-      "name": "Build AI Prompt",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [650, 300]
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "name": "Wait for DB Queries",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 2.1,
-      "position": [550, 300]
-    },
-    {
-      "parameters": {
-        "model": "gemini-3-flash",
+        },
         "options": {
-          "temperature": 0.7,
-          "maxOutputTokens": 800
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      }
+    },
+    {
+      "id": "n2",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        560,
+        300
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Trigger').item.json.message }}",
+        "systemMessage": "={{ $('Get Brain Context').item.json.system_prompt }}\n\nCurrent time: {{ $now.toISO() }}\nOwner chat_id: {{ $('Trigger').item.json.chatId }}",
+        "options": {
+          "maxIterations": 8,
+          "returnIntermediateSteps": false,
+          "passthroughBinaryImages": false
+        }
+      }
+    },
+    {
+      "id": "n2-memory",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        560,
+        480
+      ],
+      "parameters": {
+        "sessionKey": "={{ $('Trigger').item.json.chatId }}",
+        "contextWindowLength": 20
+      }
+    },
+    {
+      "id": "n2-model",
+      "name": "Gemini Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        400,
+        480
+      ],
+      "parameters": {
+        "modelName": "gemini-2.0-flash-001",
+        "options": {
+          "maxOutputTokens": 2048,
+          "temperature": 0.7
         }
       },
-      "name": "Gemini AI",
-      "type": "n8n-nodes-base.googlePaLmChatModel",
-      "typeVersion": 1,
-      "position": [850, 300],
       "credentials": {
         "googlePalmApi": {
-          "id": "gemini-credentials",
-          "name": "Gemini API"
+          "id": "",
+          "name": "Google Gemini (auto)"
         }
       }
     },
     {
-      "parameters": {
-        "options": {}
-      },
-      "name": "AI Agent",
-      "type": "n8n-nodes-base.agent",
+      "id": "tool-execute",
+      "name": "Mac Agent Execute",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
       "typeVersion": 1.1,
-      "position": [850, 300]
-    },
-    {
+      "position": [
+        730,
+        480
+      ],
       "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO conversations (user_id, username, user_message, ai_response, timestamp) VALUES ($1, $2, $3, $4, datetime('now'))",
-        "additionalFields": {
+        "method": "POST",
+        "url": "http://host.docker.internal:4242/execute",
+        "name": "execute",
+        "description": "Execute actions on the owner's Mac. Tools: shell (run commands), file_read, file_write, notify (macOS notification), open_url, brain_note (remember a fact), brain_recall (search memory), brain_stats, brain_new_session.\nPass: {\"tool\": \"<tool_name>\", \"args\": {\"chat_id\": \"<chatId>\", ...tool_args}}",
+        "sendBody": true,
+        "bodyParameters": {
           "parameters": [
             {
-              "name": "user_id",
-              "value": "={{ $json.userId }}"
+              "name": "tool",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('tool', 'The tool name to execute', 'string') }}"
             },
             {
-              "name": "username",
-              "value": "={{ $json.username }}"
+              "name": "args",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('args', 'Tool arguments as JSON object', 'json') }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 35000
+        },
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "tool",
+              "description": "Tool name: shell, file_read, file_write, notify, open_url, brain_note, brain_recall, brain_stats, brain_new_session",
+              "type": "string"
             },
             {
-              "name": "user_message",
-              "value": "={{ $json.userMessage }}"
-            },
-            {
-              "name": "ai_response",
-              "value": "={{ $json.response }}"
+              "name": "args",
+              "description": "Tool arguments object. Always include chat_id for brain tools. For shell: {\"command\": \"...\"}. For brain_note: {\"fact\": \"...\", \"category\": \"...\", \"chat_id\": \"...\"}. For brain_recall: {\"query\": \"...\", \"chat_id\": \"...\"}.",
+              "type": "json"
             }
           ]
         }
-      },
-      "name": "Save Conversation",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.2,
-      "position": [1050, 300],
-      "credentials": {
-        "postgres": {
-          "id": "sqlite-credentials",
-          "name": "ronku-bot-db"
-        }
       }
     },
     {
+      "id": "n3",
+      "name": "Send Reply",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        800,
+        300
+      ],
       "parameters": {
-        "chatId": "={{ $json.chatId }}",
-        "text": "={{ $json.response }}",
+        "chatId": "={{ $('Trigger').item.json.chatId }}",
+        "text": "={{ $json.output }}",
         "additionalFields": {
           "parse_mode": "Markdown"
         }
       },
-      "name": "Send Telegram Message",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.1,
-      "position": [1250, 300],
       "credentials": {
         "telegramApi": {
-          "id": "telegram-credentials",
-          "name": "ronku_bot"
+          "id": "",
+          "name": "Telegram Bot (auto)"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "n4",
+      "name": "Save to Brain",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1020,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://host.docker.internal:4242/brain/save-get",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $('Trigger').item.json.chatId }}"
+            },
+            {
+              "name": "role",
+              "value": "user"
+            },
+            {
+              "name": "content",
+              "value": "={{ encodeURIComponent($('Trigger').item.json.message) }}"
+            },
+            {
+              "name": "provider",
+              "value": "gemini-agent"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 5000
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "n4b",
+      "name": "Save AI Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1020,
+        420
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://host.docker.internal:4242/brain/save-get",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $('Trigger').item.json.chatId }}"
+            },
+            {
+              "name": "role",
+              "value": "assistant"
+            },
+            {
+              "name": "content",
+              "value": "={{ encodeURIComponent($('AI Agent').item.json.output) }}"
+            },
+            {
+              "name": "provider",
+              "value": "gemini-agent"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 5000
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "n5",
+      "name": "Extract Facts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1240,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://host.docker.internal:4242/brain/extract",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $('Trigger').item.json.chatId }}"
+            },
+            {
+              "name": "user_text",
+              "value": "={{ encodeURIComponent($('Trigger').item.json.message) }}"
+            },
+            {
+              "name": "ai_text",
+              "value": "={{ encodeURIComponent($('AI Agent').item.json.output) }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "n-error",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        800,
+        500
+      ],
+      "parameters": {
+        "chatId": "={{ $('Trigger').item.json.chatId }}",
+        "text": "Hmm, couldn't reach my brain right now. Try again in a moment? 🙃",
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram Bot (auto)"
         }
       }
     }
   ],
   "connections": {
-    "Execute Workflow Trigger": {
+    "Trigger": {
       "main": [
         [
           {
-            "node": "Get Conversation History",
+            "node": "Get Brain Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Brain Context": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Reply": {
+      "main": [
+        [
+          {
+            "node": "Save to Brain",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Get User Memory",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Wait for DB Queries",
+            "node": "Save AI Reply",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get Conversation History": {
+    "Save to Brain": {
       "main": [
         [
           {
-            "node": "Wait for DB Queries",
+            "node": "Extract Facts",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get User Memory": {
-      "main": [
-        [
-          {
-            "node": "Wait for DB Queries",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Wait for DB Queries": {
-      "main": [
-        [
-          {
-            "node": "Build AI Prompt",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Build AI Prompt": {
-      "main": [
-        [
-          {
-            "node": "Gemini AI",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Gemini AI": {
-      "main": [
-        [
-          {
-            "node": "Save Conversation",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Save Conversation": {
-      "main": [
-        [
-          {
-            "node": "Send Telegram Message",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
+    "Windows Buffer Memory": {},
+    "Gemini Model": {},
+    "Mac Agent Execute": {}
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
   },
-  "staticData": null,
-  "tags": ["ronku-bot", "ai", "gemini"]
+  "meta": {
+    "description": "Agentic AI chat via n8n AI Agent node (Gemini 2.0 Flash). Reply-first ordering: user gets response before save/extract. Fallback error handler sends friendly message if AI Agent fails.",
+    "instanceId": ""
+  }
 }

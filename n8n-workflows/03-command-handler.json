@@ -2,29 +2,41 @@
   "name": "03 - Command Handler",
   "nodes": [
     {
-      "parameters": {},
+      "id": "c0",
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
       "position": [
-        250,
+        100,
         300
-      ]
+      ],
+      "parameters": {}
     },
     {
-      "parameters": {
-        "jsCode": "// Parse command and arguments\nconst text = $input.first().json.text;\nconst parts = text.split(' ');\nconst command = parts[0].toLowerCase();\nconst args = parts.slice(1).join(' ');\n\n// Extract command name without /\nconst commandName = command.replace('/', '');\n\nreturn [{\n  json: {\n    command: commandName,\n    args: args,\n    fullText: text,\n    chatId: $input.first().json.chatId,\n    userId: $input.first().json.userId,\n    username: $input.first().json.username\n  }\n}];"
-      },
+      "id": "c1",
       "name": "Parse Command",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        450,
+        320,
         300
-      ]
+      ],
+      "parameters": {
+        "jsCode": "const text = $input.first().json.text || '';\nconst parts = text.trim().split(/\\s+/);\nconst commandName = (parts[0] || '').replace('/', '').toLowerCase();\nconst args = parts.slice(1).join(' ');\nreturn [{ json: {\n  command: commandName,\n  args,\n  fullText: text,\n  chatId: $input.first().json.chatId,\n  userId: $input.first().json.userId,\n  username: $input.first().json.username\n} }];"
+      }
     },
     {
+      "id": "c2",
+      "name": "Route Command",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [
+        540,
+        300
+      ],
       "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.command }}",
         "rules": {
           "rules": [
             {
@@ -32,786 +44,266 @@
               "output": 0
             },
             {
-              "value": "status",
+              "value": "clear",
               "output": 1
             },
             {
-              "value": "remember",
+              "value": "status",
               "output": 2
             },
             {
-              "value": "recall",
-              "output": 3
-            },
-            {
-              "value": "clear",
-              "output": 4
-            },
-            {
-              "value": "read",
-              "output": 5
-            },
-            {
-              "value": "list",
-              "output": 6
-            },
-            {
               "value": "exec",
-              "output": 7
-            },
-            {
-              "value": "email",
-              "output": 8
-            },
-            {
-              "value": "system",
-              "output": 9
+              "output": 3
             }
           ]
-        }
-      },
-      "name": "Route Command",
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 2,
-      "position": [
-        650,
-        300
-      ]
+        },
+        "fallbackOutput": 4
+      }
     },
     {
+      "id": "c-help",
+      "name": "Help Response",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        760,
+        60
+      ],
       "parameters": {
         "chatId": "={{ $json.chatId }}",
-        "text": "👋 Hey there! Here are the things I can help you with:\\n\\n💬 **Chat** - Just message me naturally\\n📊 **/status** - Check your Mac's system status\\n🧠 **/remember [fact]** - I'll remember something for you\\n💭 **/recall** - Show what I remember\\n🗑️ **/clear** - Clear conversation history\\n📁 **/read [filepath]** - Read a text file\\n📂 **/list [directory]** - List directory contents\\n⚡ **/exec [command]** - Run a safe command\\n\\n📧 **Email Commands:**\\n`/email auth` - Connect your Gmail account\\n`/email check` - Check unread emails\\n`/email read [id]` - Read a specific email\\n`/email reply [id]` - AI-powered reply drafts\\n`/email send` - Compose a new email\\n`/email search [query]` - Search your emails\\n\\n🔧 **System Control (owner only):**\\n`/system status` - Check if bot is running\\n`/system restart` - Restart ronkbot\\n`/system stop` - Stop ronkbot\\n`/system wake` - Check power/sleep status\\n\\nJust chat naturally or use any command above! 😊",
+        "text": "👋 *Hey Rohan!* Here's what I can do:\n\n💬 *Chat* — Just message me naturally. I can:\n  • Run commands on your Mac\n  • Read & write files\n  • Remember things for you\n  • Search your memory\n  • Set reminders & TODOs\n  • Send macOS notifications\n\n⚡ *Slash commands (fast path):*\n`/status` — Mac disk + memory snapshot\n`/exec <cmd>` — Run a shell command directly\n`/clear` — Start a fresh conversation\n`/help` — This message\n\n🧠 *For everything else, just ask!*\nExamples:\n_\"remind me to call mom at 5pm\"_\n_\"what files changed in my project today?\"_\n_\"what do you know about me?\"_",
         "additionalFields": {
           "parse_mode": "Markdown"
         }
       },
-      "name": "Help Response",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.1,
-      "position": [
-        850,
-        100
-      ],
       "credentials": {
         "telegramApi": {
-          "id": "telegram-credentials",
-          "name": "ronku_bot"
+          "id": "",
+          "name": "Telegram Bot (auto)"
         }
       }
     },
     {
-      "parameters": {
-        "command": "df -h",
-        "cwd": "/Users/ronkuwonku"
-      },
-      "name": "Get Disk Usage",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
+      "id": "c-clear-brain",
+      "name": "Clear Session",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
-        850,
+        760,
         200
-      ]
+      ],
+      "parameters": {
+        "method": "DELETE",
+        "url": "http://host.docker.internal:4242/brain/session",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $json.chatId }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 5000
+        }
+      },
+      "continueOnFail": true
     },
     {
-      "parameters": {
-        "command": "vm_stat | head -5",
-        "cwd": "/Users/ronkuwonku"
-      },
-      "name": "Get Memory",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
+      "id": "c-clear-confirm",
+      "name": "Clear Confirm",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
       "position": [
-        850,
-        300
-      ]
+        980,
+        200
+      ],
+      "parameters": {
+        "chatId": "={{ $('Parse Command').item.json.chatId }}",
+        "text": "🧹 Fresh start! Conversation history cleared.\n\nWhat's on your mind?",
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram Bot (auto)"
+        }
+      }
     },
     {
+      "id": "c-status-disk",
+      "name": "Get Disk",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        760,
+        340
+      ],
       "parameters": {
-        "jsCode": "// Format status response\nconst diskOutput = $('Get Disk Usage').first().json.stdout || 'N/A';\nconst memOutput = $('Get Memory').first().json.stdout || 'N/A';\n\nconst message = `📊 **System Status**\\n\\n💾 **Disk Usage:**\\n\\`\\`\\`\\n${diskOutput}\\`\\`\\`\\n\\n🧠 **Memory:**\\n\\`\\`\\`\\n${memOutput}\\`\\`\\`\\n\\n⏱️ Last updated: ${new Date().toLocaleString()}`;\n\nreturn [{\n  json: {\n    message: message,\n    chatId: $input.first().json.chatId\n  }\n}];"
+        "method": "POST",
+        "url": "http://host.docker.internal:4242/execute",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"tool\": \"shell\", \"args\": {\"command\": \"df -h / | tail -1\"}}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
       },
+      "continueOnFail": true
+    },
+    {
+      "id": "c-status-mem",
+      "name": "Get Memory",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        760,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:4242/execute",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"tool\": \"shell\", \"args\": {\"command\": \"memory_pressure | head -1\"}}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "c-status-format",
       "name": "Format Status",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1050,
-        250
-      ]
+        980,
+        400
+      ],
+      "parameters": {
+        "jsCode": "const disk = ($('Get Disk').item.json.output || 'n/a').trim();\nconst mem  = ($('Get Memory').item.json.output || 'n/a').trim();\nconst msg = `📊 *System Status*\n\n💾 *Disk (/)* \\`${disk}\\`\n🧠 *Memory* ${mem}\n⏱ ${new Date().toLocaleString('en-US', {timeZone:'America/New_York'})}`;\nreturn [{ json: { message: msg, chatId: $('Parse Command').item.json.chatId } }];"
+      }
     },
     {
-      "parameters": {
-        "chatId": "={{ $json.chatId }}",
-        "text": "={{ $json.message }}",
-        "additionalFields": {
-          "parse_mode": "Markdown"
-        }
-      },
+      "id": "c-status-send",
       "name": "Send Status",
       "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.1,
+      "typeVersion": 1.2,
       "position": [
-        1250,
-        250
-      ],
-      "credentials": {
-        "telegramApi": {
-          "id": "telegram-credentials",
-          "name": "ronku_bot"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO memory (user_id, username, fact, timestamp) VALUES ($1, $2, $3, datetime('now'))",
-        "additionalFields": {
-          "parameters": [
-            {
-              "name": "user_id",
-              "value": "={{ $json.userId }}"
-            },
-            {
-              "name": "username",
-              "value": "={{ $json.username }}"
-            },
-            {
-              "name": "fact",
-              "value": "={{ $json.args }}"
-            }
-          ]
-        }
-      },
-      "name": "Save Memory",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.2,
-      "position": [
-        850,
+        1200,
         400
       ],
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
       "credentials": {
-        "postgres": {
-          "id": "sqlite-credentials",
-          "name": "ronku-bot-db"
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram Bot (auto)"
         }
       }
     },
     {
+      "id": "c-exec-run",
+      "name": "Run Exec",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        760,
+        580
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:4242/execute",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tool: 'shell', args: { command: $json.args } }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "id": "c-exec-format",
+      "name": "Format Exec Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        980,
+        580
+      ],
+      "parameters": {
+        "jsCode": "const result = $input.first().json;\nconst out = (result.output || result.error || 'No output').trim();\nconst icon = result.success === false ? '❌' : '✅';\nconst cmd = $('Parse Command').item.json.args;\nconst msg = `${icon} \\`${cmd}\\`\\n\\`\\`\\`\\n${out.slice(0,3000)}\\`\\`\\``;\nreturn [{ json: { message: msg, chatId: $('Parse Command').item.json.chatId } }];"
+      }
+    },
+    {
+      "id": "c-exec-send",
+      "name": "Send Exec Result",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        580
+      ],
       "parameters": {
         "chatId": "={{ $json.chatId }}",
-        "text": "✅ Got it! I'll remember that:\\\\n\\\\n\\\"{{ $json.args }}\\\"\\\\n\\\\n💡 Use /recall to see everything I remember!",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram Bot (auto)"
+        }
+      }
+    },
+    {
+      "id": "c-unknown",
+      "name": "Unknown Command",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        760,
+        700
+      ],
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "🤔 I don't know that command. Try `/help` to see what I can do, or just chat with me naturally!",
         "additionalFields": {}
       },
-      "name": "Confirm Remember",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.1,
-      "position": [
-        1050,
-        400
-      ],
       "credentials": {
         "telegramApi": {
-          "id": "telegram-credentials",
-          "name": "ronku_bot"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT fact FROM memory WHERE user_id = $1 ORDER BY timestamp DESC",
-        "additionalFields": {
-          "parameters": [
-            {
-              "name": "user_id",
-              "value": "={{ $json.userId }}"
-            }
-          ]
-        }
-      },
-      "name": "Get All Memory",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.2,
-      "position": [
-        850,
-        500
-      ],
-      "credentials": {
-        "postgres": {
-          "id": "sqlite-credentials",
-          "name": "ronku-bot-db"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "// Format memory list\nconst items = $('Get All Memory').all();\n\nif (!items || items.length === 0) {\n  return [{\n    json: {\n      message: '🧠 I don\\'t remember anything yet!\\n\\nUse /remember to tell me things I should remember. 😊',\n      chatId: $input.first().json.chatId\n    }\n  }];\n}\n\nlet message = '🧠 **Here\\'s what I remember about you:**\\n\\n';\nitems.forEach((item, index) => {\n  message += `${index + 1}. ${item.json.fact}\\n`;\n});\n\nmessage += '\\n💡 Use /remember to add more!';\n\nreturn [{\n  json: {\n    message: message,\n    chatId: $input.first().json.chatId\n  }\n}];"
-      },
-      "name": "Format Memory List",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1050,
-        500
-      ]
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $json.chatId }}",
-        "text": "={{ $json.message }}",
-        "additionalFields": {
-          "parse_mode": "Markdown"
-        }
-      },
-      "name": "Send Memory",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.1,
-      "position": [
-        1250,
-        500
-      ],
-      "credentials": {
-        "telegramApi": {
-          "id": "telegram-credentials",
-          "name": "ronku_bot"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "DELETE FROM conversations WHERE user_id = $1",
-        "additionalFields": {
-          "parameters": [
-            {
-              "name": "user_id",
-              "value": "={{ $json.userId }}"
-            }
-          ]
-        }
-      },
-      "name": "Clear History",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.2,
-      "position": [
-        850,
-        600
-      ],
-      "credentials": {
-        "postgres": {
-          "id": "sqlite-credentials",
-          "name": "ronku-bot-db"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $json.chatId }}",
-        "text": "🧹 **Conversation history cleared!**\\\\n\\\\nI'm starting fresh. What would you like to talk about? 😊",
-        "additionalFields": {
-          "parse_mode": "Markdown"
-        }
-      },
-      "name": "Confirm Clear",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.1,
-      "position": [
-        1050,
-        600
-      ],
-      "credentials": {
-        "telegramApi": {
-          "id": "telegram-credentials",
-          "name": "ronku_bot"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "// Parse email subcommand from args\n// Format: /email <subcommand> [args...]\n// e.g.  /email check\n//        /email read abc123\n//        /email reply abc123\n//        /email send\n//        /email search invoice\n//        /email auth\n\nconst args = $input.first().json.args || '';\nconst parts = args.trim().split(' ');\nconst subcommand = (parts[0] || 'check').toLowerCase();\nconst subArgs = parts.slice(1).join(' ');\n\nreturn [{\n  json: {\n    ...$input.first().json,\n    subcommand: subcommand,\n    subArgs: subArgs\n  }\n}];"
-      },
-      "name": "Parse Email Subcommand",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        850,
-        750
-      ]
-    },
-    {
-      "parameters": {
-        "rules": {
-          "rules": [
-            {
-              "value": "auth",
-              "output": 0
-            },
-            {
-              "value": "check",
-              "output": 1
-            },
-            {
-              "value": "read",
-              "output": 2
-            },
-            {
-              "value": "reply",
-              "output": 3
-            },
-            {
-              "value": "send",
-              "output": 4
-            },
-            {
-              "value": "search",
-              "output": 5
-            }
-          ]
-        }
-      },
-      "name": "Route Email Subcommand",
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 2,
-      "position": [
-        1050,
-        750
-      ]
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $json.chatId }}",
-        "text": "🔐 **Connect Your Gmail Account**\\n\\nClick the link below to authorize ronkbot:\\n\\n`http://localhost:5678/gmail-auth`\\n\\n**Steps:**\\n1. Click the link above (open in browser)\\n2. Sign in with your Google account\\n3. Grant the requested permissions\\n4. You'll see a success message\\n\\nAfter connecting, use `/email check` to see your emails! 📧\\n\\n⚠️ Make sure you've set up Gmail credentials in your `.env` file first. See `docs/EMAIL_SETUP.md` for details.",
-        "additionalFields": {
-          "parse_mode": "Markdown"
-        }
-      },
-      "name": "Email Auth Message",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.1,
-      "position": [
-        1300,
-        550
-      ],
-      "credentials": {
-        "telegramApi": {
-          "id": "telegram-credentials",
-          "name": "ronku_bot"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "workflowId": "05 - Email Reader",
-        "workflowInputs": {
-          "values": [
-            {
-              "name": "chatId",
-              "stringValue": "={{ $json.chatId }}"
-            },
-            {
-              "name": "userId",
-              "stringValue": "={{ $json.userId }}"
-            },
-            {
-              "name": "username",
-              "stringValue": "={{ $json.username }}"
-            },
-            {
-              "name": "mode",
-              "stringValue": "check"
-            },
-            {
-              "name": "limit",
-              "stringValue": "10"
-            },
-            {
-              "name": "label",
-              "stringValue": "INBOX"
-            },
-            {
-              "name": "searchQuery",
-              "stringValue": "is:unread"
-            }
-          ]
-        }
-      },
-      "name": "Check Emails",
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.1,
-      "position": [
-        1300,
-        650
-      ]
-    },
-    {
-      "parameters": {
-        "workflowId": "05 - Email Reader",
-        "workflowInputs": {
-          "values": [
-            {
-              "name": "chatId",
-              "stringValue": "={{ $json.chatId }}"
-            },
-            {
-              "name": "userId",
-              "stringValue": "={{ $json.userId }}"
-            },
-            {
-              "name": "username",
-              "stringValue": "={{ $json.username }}"
-            },
-            {
-              "name": "mode",
-              "stringValue": "read"
-            },
-            {
-              "name": "emailId",
-              "stringValue": "={{ $json.subArgs }}"
-            }
-          ]
-        }
-      },
-      "name": "Read Email",
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.1,
-      "position": [
-        1300,
-        750
-      ]
-    },
-    {
-      "parameters": {
-        "workflowId": "06 - Email Sender",
-        "workflowInputs": {
-          "values": [
-            {
-              "name": "chatId",
-              "stringValue": "={{ $json.chatId }}"
-            },
-            {
-              "name": "userId",
-              "stringValue": "={{ $json.userId }}"
-            },
-            {
-              "name": "username",
-              "stringValue": "={{ $json.username }}"
-            },
-            {
-              "name": "mode",
-              "stringValue": "reply"
-            },
-            {
-              "name": "emailId",
-              "stringValue": "={{ $json.subArgs }}"
-            }
-          ]
-        }
-      },
-      "name": "Reply Email",
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.1,
-      "position": [
-        1300,
-        850
-      ]
-    },
-    {
-      "parameters": {
-        "workflowId": "06 - Email Sender",
-        "workflowInputs": {
-          "values": [
-            {
-              "name": "chatId",
-              "stringValue": "={{ $json.chatId }}"
-            },
-            {
-              "name": "userId",
-              "stringValue": "={{ $json.userId }}"
-            },
-            {
-              "name": "username",
-              "stringValue": "={{ $json.username }}"
-            },
-            {
-              "name": "mode",
-              "stringValue": "compose"
-            }
-          ]
-        }
-      },
-      "name": "Send Email",
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.1,
-      "position": [
-        1300,
-        950
-      ]
-    },
-    {
-      "parameters": {
-        "workflowId": "05 - Email Reader",
-        "workflowInputs": {
-          "values": [
-            {
-              "name": "chatId",
-              "stringValue": "={{ $json.chatId }}"
-            },
-            {
-              "name": "userId",
-              "stringValue": "={{ $json.userId }}"
-            },
-            {
-              "name": "username",
-              "stringValue": "={{ $json.username }}"
-            },
-            {
-              "name": "mode",
-              "stringValue": "search"
-            },
-            {
-              "name": "limit",
-              "stringValue": "10"
-            },
-            {
-              "name": "searchQuery",
-              "stringValue": "={{ $json.subArgs }}"
-            }
-          ]
-        }
-      },
-      "name": "Search Emails",
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.1,
-      "position": [
-        1300,
-        1050
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Security: only the owner can run /system commands\nconst ownerUsername = $env.TELEGRAM_OWNER_USERNAME || '';\nconst callerUsername = $input.first().json.username || '';\n\nif (!ownerUsername || callerUsername.toLowerCase() !== ownerUsername.toLowerCase()) {\n  return [{\n    json: {\n      ...$input.first().json,\n      accessDenied: true,\n      message: '\u26d4 Access denied. System commands are owner-only.'\n    }\n  }];\n}\n\nconst args = $input.first().json.args || '';\nconst parts = args.trim().split(' ');\nconst subcommand = (parts[0] || 'status').toLowerCase();\nconst subArgs = parts.slice(1).join(' ');\n\nreturn [{\n  json: {\n    ...$input.first().json,\n    accessDenied: false,\n    subcommand: subcommand,\n    subArgs: subArgs\n  }\n}];"
-      },
-      "name": "System Owner Check",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        850,
-        1200
-      ]
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $json.chatId }}",
-        "text": "={{ $json.message }}",
-        "additionalFields": {}
-      },
-      "name": "System Access Denied",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.1,
-      "position": [
-        1050,
-        1100
-      ],
-      "credentials": {
-        "telegramApi": {
-          "id": "telegram-credentials",
-          "name": "ronku_bot"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "rules": {
-          "rules": [
-            {
-              "value": "access_denied",
-              "output": 0
-            },
-            {
-              "value": "status",
-              "output": 1
-            },
-            {
-              "value": "restart",
-              "output": 2
-            },
-            {
-              "value": "stop",
-              "output": 3
-            },
-            {
-              "value": "wake",
-              "output": 4
-            }
-          ]
-        },
-        "dataType": "string",
-        "value1": "={{ $json.accessDenied ? 'access_denied' : $json.subcommand }}"
-      },
-      "name": "Route System Subcommand",
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 2,
-      "position": [
-        1050,
-        1200
-      ]
-    },
-    {
-      "parameters": {
-        "command": "docker ps --filter name=ronkbot --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}' 2>&1"
-      },
-      "name": "Docker Status",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        1250,
-        1150
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const output = $input.first().json.stdout || 'No output';\nconst running = output.includes('Up');\nconst icon = running ? '\u2705' : '\u26a0\ufe0f';\nconst msg = `${icon} *ronkbot Container Status*\\n\\n\\`\\`\\`\\n${output.trim()}\\`\\`\\``;\nreturn [{ json: { message: msg, chatId: $('System Owner Check').first().json.chatId } }];"
-      },
-      "name": "Format Docker Status",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1450,
-        1150
-      ]
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $json.chatId }}",
-        "text": "={{ $json.message }}",
-        "additionalFields": {
-          "parse_mode": "Markdown"
-        }
-      },
-      "name": "Send System Status",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.1,
-      "position": [
-        1650,
-        1150
-      ],
-      "credentials": {
-        "telegramApi": {
-          "id": "telegram-credentials",
-          "name": "ronku_bot"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "command": "docker restart ronkbot-n8n 2>&1 && echo 'RESTART_OK' || echo 'RESTART_FAILED'"
-      },
-      "name": "Docker Restart",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        1250,
-        1250
-      ]
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $('System Owner Check').first().json.chatId }}",
-        "text": "\ud83d\udd04 *Restarting ronkbot...*\\n\\nI'll be back in ~30 seconds! Use `/system status` to check.",
-        "additionalFields": {
-          "parse_mode": "Markdown"
-        }
-      },
-      "name": "Send Restart Confirm",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.1,
-      "position": [
-        1450,
-        1250
-      ],
-      "credentials": {
-        "telegramApi": {
-          "id": "telegram-credentials",
-          "name": "ronku_bot"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "command": "docker stop ronkbot-n8n 2>&1 && echo 'STOP_OK' || echo 'STOP_FAILED'"
-      },
-      "name": "Docker Stop",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        1250,
-        1350
-      ]
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $('System Owner Check').first().json.chatId }}",
-        "text": "\ud83d\uded1 *ronkbot stopped.*\\n\\nTo restart from your iPhone, tap the *Start ronkbot* Shortcut or run:\\n`docker start ronkbot-n8n`",
-        "additionalFields": {
-          "parse_mode": "Markdown"
-        }
-      },
-      "name": "Send Stop Confirm",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.1,
-      "position": [
-        1450,
-        1350
-      ],
-      "credentials": {
-        "telegramApi": {
-          "id": "telegram-credentials",
-          "name": "ronku_bot"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "command": "pmset -g batt 2>&1; echo '---'; pmset -g assertions 2>&1 | grep -E '(PreventSleep|PreventUserIdleSystem|NoIdleSleepAssertion)' | head -5"
-      },
-      "name": "Get Power Status",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        1250,
-        1450
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const output = $input.first().json.stdout || '';\nconst hasACPower = output.includes('AC Power') || output.includes('charged');\nconst hasSleepPrevention = output.includes('PreventSleep') || output.includes('NoIdleSleep');\nconst battLine = output.split('\\n').find(l => l.includes('%')) || 'Unknown';\n\nlet wakeStatus;\nif (hasACPower && hasSleepPrevention) {\n  wakeStatus = '\u2705 Mac is plugged in and sleep prevention is active. Bot will stay awake!';\n} else if (hasACPower) {\n  wakeStatus = '\u26a0\ufe0f On AC power but no sleep prevention detected.\\n\\nInstall *Amphetamine* (free) to stay awake with lid closed:\\nhttps://apps.apple.com/us/app/amphetamine/id937984704';\n} else {\n  wakeStatus = '\ud83d\udd0b On battery \u2014 Mac may sleep!\\n\\nPlug in + install *Amphetamine* (free) for always-on use:\\nhttps://apps.apple.com/us/app/amphetamine/id937984704';\n}\n\nconst msg = `\ud83d\udcf1 *Wake / Power Status*\\n\\n${wakeStatus}\\n\\n*Battery:* ${battLine.trim()}`;\nreturn [{ json: { message: msg, chatId: $('System Owner Check').first().json.chatId } }];"
-      },
-      "name": "Format Wake Status",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1450,
-        1450
-      ]
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $json.chatId }}",
-        "text": "={{ $json.message }}",
-        "additionalFields": {
-          "parse_mode": "Markdown"
-        }
-      },
-      "name": "Send Wake Status",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.1,
-      "position": [
-        1650,
-        1450
-      ],
-      "credentials": {
-        "telegramApi": {
-          "id": "telegram-credentials",
-          "name": "ronku_bot"
+          "id": "",
+          "name": "Telegram Bot (auto)"
         }
       }
     }
@@ -850,7 +342,14 @@
         ],
         [
           {
-            "node": "Get Disk Usage",
+            "node": "Clear Session",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Disk",
             "type": "main",
             "index": 0
           },
@@ -862,45 +361,32 @@
         ],
         [
           {
-            "node": "Save Memory",
+            "node": "Run Exec",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Get All Memory",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Clear History",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [],
-        [],
-        [],
-        [
-          {
-            "node": "Parse Email Subcommand",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "System Owner Check",
+            "node": "Unknown Command",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get Disk Usage": {
+    "Clear Session": {
+      "main": [
+        [
+          {
+            "node": "Clear Confirm",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Disk": {
       "main": [
         [
           {
@@ -933,217 +419,22 @@
         ]
       ]
     },
-    "Save Memory": {
+    "Run Exec": {
       "main": [
         [
           {
-            "node": "Confirm Remember",
+            "node": "Format Exec Result",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get All Memory": {
+    "Format Exec Result": {
       "main": [
         [
           {
-            "node": "Format Memory List",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Memory List": {
-      "main": [
-        [
-          {
-            "node": "Send Memory",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Clear History": {
-      "main": [
-        [
-          {
-            "node": "Confirm Clear",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse Email Subcommand": {
-      "main": [
-        [
-          {
-            "node": "Route Email Subcommand",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Route Email Subcommand": {
-      "main": [
-        [
-          {
-            "node": "Email Auth Message",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Check Emails",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Read Email",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Reply Email",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Send Email",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Search Emails",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "System Owner Check": {
-      "main": [
-        [
-          {
-            "node": "Route System Subcommand",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Route System Subcommand": {
-      "main": [
-        [
-          {
-            "node": "System Access Denied",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Docker Status",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Docker Restart",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Docker Stop",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Get Power Status",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Docker Status": {
-      "main": [
-        [
-          {
-            "node": "Format Docker Status",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Docker Status": {
-      "main": [
-        [
-          {
-            "node": "Send System Status",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Docker Restart": {
-      "main": [
-        [
-          {
-            "node": "Send Restart Confirm",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Docker Stop": {
-      "main": [
-        [
-          {
-            "node": "Send Stop Confirm",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Power Status": {
-      "main": [
-        [
-          {
-            "node": "Format Wake Status",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Wake Status": {
-      "main": [
-        [
-          {
-            "node": "Send Wake Status",
+            "node": "Send Exec Result",
             "type": "main",
             "index": 0
           }
@@ -1152,11 +443,10 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "callerPolicy": "any"
   },
-  "staticData": null,
-  "tags": [
-    "ronku-bot",
-    "commands"
-  ]
+  "meta": {
+    "description": "Lean command handler: /help (static), /clear (brain/session DELETE), /status (mac-agent shell), /exec (mac-agent shell). All other commands route to Unknown. Memory/recall/read/list are now AI Agent tools."
+  }
 }

@@ -12,29 +12,62 @@ services:
       - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
       - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
       - N8N_PORT=5678
-      - N8N_PROTOCOL=http
-      - N8N_HOST=localhost
-      - WEBHOOK_URL=http://localhost:5678/
+      - WEBHOOK_URL=${NGROK_URL}/
+      - N8N_SECURE_COOKIE=false
       - GENERIC_TIMEZONE=UTC
       - N8N_LOG_LEVEL=info
       - N8N_METRICS=true
       - N8N_DIAGNOSTICS_ENABLED=false
+      - "NODES_EXCLUDE=[]"
+      - N8N_WORKFLOW_CALLER_POLICY_DEFAULT_OPTION=any
       - DB_TYPE=${DB_TYPE}
       - DB_SQLITE_PATH=${DB_SQLITE_PATH}
       - EXECUTIONS_MODE=regular
       - EXECUTIONS_TIMEOUT=300
       - EXECUTIONS_TIMEOUT_MAX=3600
+      # Skip setup wizard — auto-create owner on first run
+      - N8N_DEFAULT_LOCALE=en
+      - N8N_USER_MANAGEMENT_DISABLED=false
+      - N8N_SKIP_WEBHOOK_DEREGISTRATION_SHUTDOWN=true
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - N8N_OWNER_EMAIL=${N8N_OWNER_EMAIL}
+      - N8N_OWNER_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
+      - N8N_OWNER_FIRST_NAME=Rohan
+      - N8N_OWNER_LAST_NAME=Agarwal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./data/n8n:/home/node/.n8n
       - ./data/sqlite:/home/node/.n8n/database
       - ./n8n-workflows:/home/node/.n8n/workflows
       - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5678/healthz"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:5678/healthz"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    networks:
+      - ronkbot-network
+
+  # Auto-setup: imports workflows, activates them, registers Telegram webhook
+  webhook-setup:
+    image: python:3.11-slim
+    container_name: ronkbot-webhook-setup
+    restart: "no"
+    depends_on:
+      n8n:
+        condition: service_healthy
+    environment:
+      - N8N_URL=http://n8n:5678
+      - N8N_USER=${N8N_OWNER_EMAIL}
+      - N8N_PASS=${N8N_BASIC_AUTH_PASSWORD}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - NGROK_URL=${NGROK_URL}
+    volumes:
+      - ./n8n-workflows:/workflows:ro
+      - ./scripts:/scripts:ro
+    entrypoint: sh -c "pip install -q requests && python3 /scripts/docker-startup.py"
     networks:
       - ronkbot-network
 
