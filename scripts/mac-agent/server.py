@@ -558,7 +558,7 @@ async def brain_mood(req: MoodRequest):
     return {"ok": True}
 
 @app.post("/brain/reflect")
-async def brain_reflect(chat_id: str = "REDACTED_CHAT_ID"):
+async def brain_reflect(chat_id: str = os.environ.get("TELEGRAM_OWNER_CHAT_ID", "")):
     """Trigger daily reflection: summarize conversations, update MEMORY.md."""
     try:
         result = Brain.run_daily_reflection(chat_id)

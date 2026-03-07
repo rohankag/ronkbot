@@ -80,22 +80,29 @@ for i in range(30):
     time.sleep(1)
 
 # Setup owner
+n8n_email = os.environ.get('N8N_OWNER_EMAIL', '')
+n8n_pass = os.environ.get('N8N_BASIC_AUTH_PASSWORD', '')
+tg_token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+owner_name = os.environ.get('OWNER_NAME', 'Owner').split(' ', 1)
+first_name = owner_name[0]
+last_name = owner_name[1] if len(owner_name) > 1 else ''
+
 s.post(f"{BASE}/rest/owner/setup", json={
-    "email": "REDACTED_EMAIL",
-    "firstName": "Rohan", "lastName": "Agarwal",
-    "password": "REDACTED_PASSWORD"
+    "email": n8n_email,
+    "firstName": first_name, "lastName": last_name,
+    "password": n8n_pass
 }, timeout=10)
 
 # Login
 s.post(f"{BASE}/rest/login", json={
-    "emailOrLdapLoginId": "REDACTED_EMAIL",
-    "password": "REDACTED_PASSWORD"
+    "emailOrLdapLoginId": n8n_email,
+    "password": n8n_pass
 }, timeout=10)
 
 # Create Telegram credential
 r = s.post(f"{BASE}/rest/credentials", json={
     "name": "ronku_bot", "type": "telegramApi",
-    "data": {"accessToken": "REDACTED_BOT_TOKEN"}
+    "data": {"accessToken": tg_token}
 }, timeout=10)
 tg_cred_id = (r.json().get("data") or r.json()).get("id")
 print(f"Telegram cred: {tg_cred_id}")
@@ -138,9 +145,12 @@ def load_env(path):
                 vals[k.strip()] = v.strip()
     return vals
 
-env = load_env("/Users/rohankagarwal/coding/LC/projects/ronkbot/.env")
+project_dir = os.environ.get('PROJECT_DIR', os.path.dirname(os.path.dirname(os.path.abspath('.'))))
+env_path = os.path.join(project_dir, '.env')
+env = load_env(env_path)
 
-with open("/Users/rohankagarwal/coding/LC/projects/ronkbot/n8n-workflows/02-gemini-chat.json") as f:
+wf_dir = os.path.join(project_dir, 'n8n-workflows')
+with open(os.path.join(wf_dir, '02-gemini-chat.json')) as f:
     wf02 = json.load(f)
 for k in SKIP_FIELDS: wf02.pop(k, None)
 wf02.setdefault("settings", {})["callerPolicy"] = "any"
@@ -167,7 +177,7 @@ print(f"02 imported: {id_02}")
 if id_02: print(f"  activate: {activate_wf(id_02)}")
 
 # Import 03 - Command Handler (without email nodes)
-with open("/Users/rohankagarwal/coding/LC/projects/ronkbot/n8n-workflows/03-command-handler.json") as f:
+with open(os.path.join(wf_dir, '03-command-handler.json')) as f:
     wf03 = json.load(f)
 for k in SKIP_FIELDS: wf03.pop(k, None)
 wf03.setdefault("settings", {})["callerPolicy"] = "any"
@@ -195,7 +205,7 @@ for sn in ["05 - Email Reader", "06 - Email Sender"]:
     print(f"{sn} stub: {stub_id}")
 
 # Import 01 - Telegram Listener (with corrected IDs)
-with open("/Users/rohankagarwal/coding/LC/projects/ronkbot/n8n-workflows/01-telegram-listener.json") as f:
+with open(os.path.join(wf_dir, '01-telegram-listener.json')) as f:
     wf01 = json.load(f)
 for k in SKIP_FIELDS: wf01.pop(k, None)
 wf01.setdefault("settings", {})["callerPolicy"] = "any"

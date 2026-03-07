@@ -15,7 +15,7 @@ log = logging.getLogger("mac-agent.watchdog")
 
 # ── Config ───────────────────────────────────────────────────────────────────
 N8N_URL           = os.environ.get("N8N_URL", "http://localhost:5678")
-N8N_EMAIL         = os.environ.get("N8N_OWNER_EMAIL", "REDACTED_EMAIL")
+N8N_EMAIL         = os.environ.get("N8N_OWNER_EMAIL", "")
 N8N_PASS          = os.environ.get("N8N_BASIC_AUTH_PASSWORD", "")
 TELEGRAM_TOKEN    = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 NGROK_URL         = os.environ.get("NGROK_URL", "")

@@ -318,7 +318,7 @@
       ],
       "parameters": {
         "chatId": "={{ $('Trigger').item.json.chatId }}",
-        "text": "Hmm, couldn't reach my brain right now. Try again in a moment? 🙃",
+        "text": "Hmm, couldn't reach my brain right now. Try again in a moment? \ud83d\ude43",
         "additionalFields": {}
       },
       "credentials": {

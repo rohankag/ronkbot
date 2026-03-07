@@ -34,7 +34,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "// Extract message data from Webhook body + owner check\nconst raw = $input.first().json;\nconst body = raw.body || raw;\nconst msg = body.message || body;\nconst userId = msg?.from?.id || 0;\nconst username = msg?.from?.username || '';\nconst firstName = msg?.from?.first_name || '';\nconst text = msg?.text || '';\nconst chatId = msg?.chat?.id || 0;\nconst OWNER = 'ronkuwonku';\nconst isOwner = username.toLowerCase() === OWNER.toLowerCase();\nconst isCommand = text.startsWith('/');\n// Expose as 'text' and 'message' — workflow 02 AI Agent reads 'message'\nreturn [{ json: { userId, username, firstName, text, message: text, chatId, isCommand, isOwner } }];"
+        "jsCode": "// Extract message data from Webhook body + owner check\nconst raw = $input.first().json;\nconst body = raw.body || raw;\nconst msg = body.message || body;\nconst userId = msg?.from?.id || 0;\nconst username = msg?.from?.username || '';\nconst firstName = msg?.from?.first_name || '';\nconst text = msg?.text || '';\nconst chatId = msg?.chat?.id || 0;\nconst OWNER = $env.TELEGRAM_OWNER_USERNAME || 'owner';\nconst isOwner = username.toLowerCase() === OWNER.toLowerCase();\nconst isCommand = text.startsWith('/');\n// Expose as 'text' and 'message' \u2014 workflow 02 AI Agent reads 'message'\nreturn [{ json: { userId, username, firstName, text, message: text, chatId, isCommand, isOwner } }];"
       }
     },
     {
@@ -78,7 +78,7 @@
       ],
       "parameters": {
         "chatId": "={{ $json.chatId }}",
-        "text": "⛔ This bot is private. Access denied.",
+        "text": "\u26d4 This bot is private. Access denied.",
         "additionalFields": {}
       },
       "credentials": {
@@ -267,7 +267,7 @@
         "updatedAt": "2026-03-01T16:13:29.597Z",
         "createdAt": "2026-03-01T16:13:08.637Z",
         "id": "sad96knim2PfRj77",
-        "name": "Rohan Agarwal <REDACTED_EMAIL>",
+        "name": "",
         "type": "personal",
         "icon": null,
         "description": null,
@@ -282,7 +282,7 @@
               "updatedAt": "2026-03-02T02:23:38.000Z",
               "createdAt": "2026-03-01T16:13:08.512Z",
               "id": "93c8237b-8a74-406e-8062-c2012097f011",
-              "email": "REDACTED_EMAIL",
+              "email": "",
               "firstName": "Rohan",
               "lastName": "Agarwal",
               "personalizationAnswers": null,
@@ -336,7 +336,7 @@
           300
         ],
         "parameters": {
-          "jsCode": "// Extract message data from Webhook body + owner check\nconst raw = $input.first().json;\n// Webhook node puts Telegram payload under .body\nconst body = raw.body || raw;\nconst message = body.message || body;\nconst userId = message?.from?.id || 0;\nconst username = message?.from?.username || '';\nconst firstName = message?.from?.first_name || '';\nconst text = message?.text || '';\nconst chatId = message?.chat?.id || 0;\nconst OWNER = 'ronkuwonku';\nconst isOwner = username.toLowerCase() === OWNER.toLowerCase();\nconst isCommand = text.startsWith('/');\nreturn [{ json: { userId, username, firstName, text, chatId, isCommand, isOwner } }];"
+          "jsCode": "// Extract message data from Webhook body + owner check\nconst raw = $input.first().json;\n// Webhook node puts Telegram payload under .body\nconst body = raw.body || raw;\nconst message = body.message || body;\nconst userId = message?.from?.id || 0;\nconst username = message?.from?.username || '';\nconst firstName = message?.from?.first_name || '';\nconst text = message?.text || '';\nconst chatId = message?.chat?.id || 0;\nconst OWNER = ($env && $env.TELEGRAM_OWNER_USERNAME) || 'owner';\nconst isOwner = username.toLowerCase() === OWNER.toLowerCase();\nconst isCommand = text.startsWith('/');\nreturn [{ json: { userId, username, firstName, text, chatId, isCommand, isOwner } }];"
         }
       },
       {
@@ -509,7 +509,7 @@
         ]
       }
     },
-    "authors": "Rohan Agarwal",
+    "authors": "",
     "name": null,
     "description": null,
     "autosaved": false,

@@ -182,15 +182,21 @@ init_db()
 def get_owner_chat_id() -> str:
     """Get owner's Telegram chat_id from soul config."""
     soul = load_soul()
-    return str(soul.get("identity", {}).get("telegram_chat_id", "REDACTED_CHAT_ID"))
+    fallback = os.environ.get("TELEGRAM_OWNER_CHAT_ID", "")
+    return str(soul.get("identity", {}).get("telegram_chat_id", fallback))
 
+
+# Default soul — personal values come from env vars at runtime
+_owner_name = os.environ.get("OWNER_NAME", "Owner")
+_owner_username = os.environ.get("TELEGRAM_OWNER_USERNAME", "owner")
+_owner_chat_id = os.environ.get("TELEGRAM_OWNER_CHAT_ID", "")
 
 DEFAULT_SOUL = {
     "identity": {
         "name": "ronku_bot",
-        "owner": "Rohan Agarwal (@ronkuwonku)",
-        "telegram_chat_id": "REDACTED_CHAT_ID",
-        "telegram_username": "ronkuwonku",
+        "owner": f"{_owner_name} (@{_owner_username})",
+        "telegram_chat_id": _owner_chat_id,
+        "telegram_username": _owner_username,
         "created": "2026-02-08",
         "version": 2
     },

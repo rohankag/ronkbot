@@ -14,7 +14,7 @@ N8N_USER="${N8N_BASIC_AUTH_USER:-}"
 N8N_PASS="${N8N_BASIC_AUTH_PASSWORD:-}"
 BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-}"
 NGROK="${NGROK_URL:-}"
-WF_DIR="${WF_DIR:-/Users/rohankagarwal/coding/LC/projects/ronkbot/n8n-workflows}"
+WF_DIR="${WF_DIR:-$(cd "$(dirname "$0")/.." && pwd)/n8n-workflows}"
 
 echo "🚀 ronkbot startup: $(date)"
 
@@ -40,9 +40,11 @@ if echo "${LOGIN_RESP}" | grep -q '"id"'; then
 else
   echo "  ⚠️  Login failed. Trying owner setup..."
   # Attempt owner setup (fresh instance)
+  OWNER_FIRST="${OWNER_NAME%% *}"
+  OWNER_LAST="${OWNER_NAME#* }"
   curl -sf -X POST "${N8N_URL}/rest/owner-setup" \
     -H "Content-Type: application/json" \
-    -d "{\"email\":\"${N8N_USER}\",\"firstName\":\"Rohan\",\"lastName\":\"Agarwal\",\"password\":\"${N8N_PASS}\"}" \
+    -d "{\"email\":\"${N8N_USER}\",\"firstName\":\"${OWNER_FIRST:-Owner}\",\"lastName\":\"${OWNER_LAST:-}\",\"password\":\"${N8N_PASS}\"}" \
     -c /tmp/n8n-cookies.txt -b /tmp/n8n-cookies.txt > /dev/null 2>&1 || true
   # Re-login
   curl -sf -X POST "${N8N_URL}/rest/login" \
