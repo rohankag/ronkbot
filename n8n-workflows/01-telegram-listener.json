@@ -34,7 +34,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "// Extract message data from Webhook body + owner check\nconst raw = $input.first().json;\nconst body = raw.body || raw;\nconst msg = body.message || body;\nconst userId = msg?.from?.id || 0;\nconst username = msg?.from?.username || '';\nconst firstName = msg?.from?.first_name || '';\nconst text = msg?.text || '';\nconst chatId = msg?.chat?.id || 0;\nconst OWNER = $env.TELEGRAM_OWNER_USERNAME || 'owner';\nconst isOwner = username.toLowerCase() === OWNER.toLowerCase();\nconst isCommand = text.startsWith('/');\n// Expose as 'text' and 'message' \u2014 workflow 02 AI Agent reads 'message'\nreturn [{ json: { userId, username, firstName, text, message: text, chatId, isCommand, isOwner } }];"
+        "jsCode": "// Extract message data from Webhook body + owner check\nconst raw = $input.first().json;\nconst body = raw.body || raw;\nconst msg = body.message || body;\nconst userId = msg?.from?.id || 0;\nconst username = msg?.from?.username || '';\nconst firstName = msg?.from?.first_name || '';\nconst text = msg?.text || '';\nconst chatId = msg?.chat?.id || 0;\nconst OWNER = $env.TELEGRAM_OWNER_USERNAME || '__OWNER_NOT_SET__';\nconst isOwner = username.toLowerCase() === OWNER.toLowerCase();\nconst isCommand = text.startsWith('/');\n// Expose as 'text' and 'message' \u2014 workflow 02 AI Agent reads 'message'\nreturn [{ json: { userId, username, firstName, text, message: text, chatId, isCommand, isOwner } }];"
       }
     },
     {

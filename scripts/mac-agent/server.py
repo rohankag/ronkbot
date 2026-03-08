@@ -49,6 +49,27 @@ BLOCKED_PATTERNS = [
     r"\breboot\b",
 ]
 
+# Shell command separators that enable injection
+SHELL_SEPARATORS = re.compile(r"[;|&`$]|\|\||&&")
+
+# Allowed directories for file operations (path traversal guard)
+ALLOWED_FILE_DIRS = [
+    Path.home(),  # ~/ is always allowed
+]
+# Add user-configured extra dirs from env
+for _d in os.environ.get("ALLOWED_DIRECTORIES", "").split(","):
+    _d = _d.strip()
+    if _d:
+        ALLOWED_FILE_DIRS.append(Path(_d).resolve())
+
+# Dangerous AppleScript patterns
+BLOCKED_OSASCRIPT = [
+    r"\bdo shell script\b",
+    r"\bSystem Events\b",
+    r"\bkeystroke\b",
+    r"\bkey code\b",
+]
+
 def load_allowlist() -> list[re.Pattern]:
     """Load allowed command patterns from allowlist.txt."""
     patterns = []
@@ -98,6 +119,12 @@ def tool_shell(args: dict) -> ToolResponse:
     if not cmd:
         return ToolResponse(success=False, tool="shell", output="", error="No command provided")
     
+    # Block shell injection via command separators (;, &&, ||, |, backticks, $())
+    if SHELL_SEPARATORS.search(cmd):
+        log.warning("BLOCKED shell (separator): %s", cmd)
+        return ToolResponse(success=False, tool="shell", output="",
+                            error="Command blocked: shell separators (;|&`$) are not allowed. Use one command at a time.")
+    
     allowed, reason = is_allowed(cmd)
     if not allowed:
         log.warning("BLOCKED shell: %s (%s)", cmd, reason)
@@ -105,8 +132,11 @@ def tool_shell(args: dict) -> ToolResponse:
     
     log.info("EXEC shell: %s", cmd)
     try:
+        # Use shlex.split + shell=False to prevent injection
+        import shlex
+        cmd_parts = shlex.split(cmd)
         result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True,
+            cmd_parts, shell=False, capture_output=True, text=True,
             timeout=30, cwd=args.get("cwd", str(Path.home())),
             env={**os.environ, "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin")},
         )
@@ -130,6 +160,13 @@ def tool_osascript(args: dict) -> ToolResponse:
     if not script:
         return ToolResponse(success=False, tool="osascript", output="", error="No script provided")
     
+    # Block dangerous AppleScript patterns (shell escape, keystroke injection)
+    for pat in BLOCKED_OSASCRIPT:
+        if re.search(pat, script, re.IGNORECASE):
+            log.warning("BLOCKED osascript (dangerous pattern): %s", script[:100])
+            return ToolResponse(success=False, tool="osascript", output="",
+                                error=f"AppleScript blocked: contains dangerous pattern '{pat}'")
+    
     log.info("EXEC osascript: %s", script[:100])
     try:
         result = subprocess.run(
@@ -147,6 +184,20 @@ def tool_osascript(args: dict) -> ToolResponse:
     except Exception as e:
         return ToolResponse(success=False, tool="osascript", output="", error=str(e))
 
+# ── Path traversal guard ─────────────────────────────────────────────────────
+def _check_path_allowed(p: Path, tool_name: str) -> ToolResponse | None:
+    """Return an error ToolResponse if path is outside allowed dirs, else None."""
+    resolved = p.resolve()
+    for allowed_dir in ALLOWED_FILE_DIRS:
+        try:
+            resolved.relative_to(allowed_dir)
+            return None  # path is within this allowed dir
+        except ValueError:
+            continue
+    log.warning("BLOCKED %s (path traversal): %s", tool_name, resolved)
+    return ToolResponse(success=False, tool=tool_name, output="",
+                        error=f"Path blocked: {resolved} is outside allowed directories")
+
 # ── Tool: File Read ──────────────────────────────────────────────────────────
 def tool_file_read(args: dict) -> ToolResponse:
     path = args.get("path", "")
@@ -154,6 +205,10 @@ def tool_file_read(args: dict) -> ToolResponse:
         return ToolResponse(success=False, tool="file_read", output="", error="No path provided")
     
     p = Path(path).expanduser()
+    # Path traversal guard
+    blocked = _check_path_allowed(p, "file_read")
+    if blocked:
+        return blocked
     if not p.exists():
         return ToolResponse(success=False, tool="file_read", output="", error=f"File not found: {p}")
     
@@ -173,6 +228,10 @@ def tool_file_write(args: dict) -> ToolResponse:
         return ToolResponse(success=False, tool="file_write", output="", error="No path provided")
     
     p = Path(path).expanduser()
+    # Path traversal guard
+    blocked = _check_path_allowed(p, "file_write")
+    if blocked:
+        return blocked
     log.info("WRITE file: %s (append=%s)", p, append)
     try:
         p.parent.mkdir(parents=True, exist_ok=True)

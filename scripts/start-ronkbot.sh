@@ -159,10 +159,13 @@ wf02.setdefault("settings", {})["callerPolicy"] = "any"
 for node in wf02.get("nodes", []):
     if node.get("name") == "AI Fallback Chain":
         code = node["parameters"]["jsCode"]
-        code = code.replace("'__GITHUB_TOKEN__'", f"'{env.get('GITHUB_TOKEN','ghp_PLACEHOLDER')}'")
-        code = code.replace("'__GROQ_API_KEY__'", f"'{env.get('GROQ_API_KEY','gsk_PLACEHOLDER')}'")
-        code = code.replace("'__GEMINI_API_KEY__'", f"'{env.get('GEMINI_API_KEY','')}'")
-        code = code.replace("'__OPENROUTER_API_KEY__'", f"'{env.get('OPENROUTER_API_KEY','sk-or-PLACEHOLDER')}'")
+        # Escape env values for safe embedding in JS string literals
+        def js_escape(val):
+            return val.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
+        code = code.replace("'__GITHUB_TOKEN__'", f"'{js_escape(env.get('GITHUB_TOKEN','ghp_PLACEHOLDER'))}'")
+        code = code.replace("'__GROQ_API_KEY__'", f"'{js_escape(env.get('GROQ_API_KEY','gsk_PLACEHOLDER'))}'")
+        code = code.replace("'__GEMINI_API_KEY__'", f"'{js_escape(env.get('GEMINI_API_KEY',''))}'")
+        code = code.replace("'__OPENROUTER_API_KEY__'", f"'{js_escape(env.get('OPENROUTER_API_KEY','sk-or-PLACEHOLDER'))}'")
         node["parameters"]["jsCode"] = code
         active = [p for p in ['GITHUB_TOKEN','GROQ_API_KEY','GEMINI_API_KEY','OPENROUTER_API_KEY']
                   if 'PLACEHOLDER' not in env.get(p,'PLACEHOLDER') and env.get(p,'')]
