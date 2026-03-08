@@ -1,9 +1,10 @@
 # 🤖 ronkbot
 
-[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)](https://hub.docker.com/r/rohankag/ronkbot)
 [![n8n](https://img.shields.io/badge/n8n-%23FF6D5A.svg?style=for-the-badge&logo=n8n&logoColor=white)](https://n8n.io/)
 [![Google Gemini](https://img.shields.io/badge/Gemini-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
 [![Telegram](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://telegram.org/)
+[![Docker Pulls](https://img.shields.io/docker/pulls/rohankag/ronkbot?style=for-the-badge)](https://hub.docker.com/r/rohankag/ronkbot)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
 
 **ronkbot** - A personal AI assistant that runs on your Mac and responds to Telegram messages. Built with **n8n** workflows and powered by **Google Gemini API**.
@@ -19,6 +20,9 @@
 - 📊 **System Monitoring** - Check your Mac's status (disk, memory, uptime)
 - 📁 **File Operations** - Read files and list directories (safely restricted)
 - ⚡ **Command Execution** - Run whitelisted safe shell commands
+- 📧 **Gmail Integration** - Check, read, search, and reply to emails with AI
+- 🤖 **AI Email Replies** - Generates Formal / Casual / Brief reply options
+- ✍️ **Writing Style Learning** - Analyzes your sent emails to match your voice
 - 🔒 **Privacy Focused** - All data stays local on your machine
 - 🚀 **Portable** - Docker-based, runs on any system
 - 🛠️ **Customizable** - Easy to extend with new commands and features
@@ -81,25 +85,31 @@ bash install.sh
 
 ### Alternative Installation Methods
 
-**Homebrew (Mac) - Coming Soon**
+**Homebrew (Mac):**
+
 ```bash
 brew tap rohankag/ronkbot
 brew install ronkbot
 ronkbot config
 ```
-*Homebrew tap in development. For now, use the curl installer above.*
 
-**Docker - Coming Soon**
+**Docker Hub:**
+
 ```bash
+docker pull rohankag/ronkbot:latest
 docker run -d \
   --name ronkbot \
   -p 5678:5678 \
   -v ~/.ronkbot/data:/home/node/.n8n \
+  -e TELEGRAM_BOT_TOKEN=your_token \
+  -e GEMINI_API_KEY=your_key \
+  -e N8N_BASIC_AUTH_USER=admin \
+  -e N8N_BASIC_AUTH_PASSWORD=changeme \
   rohankag/ronkbot:latest
 ```
-*Docker Hub image in development. For now, use the curl installer above or build locally.*
 
 **Manual:**
+
 ```bash
 git clone https://github.com/rohankag/ronkbot.git ~/.ronkbot
 cd ~/.ronkbot
@@ -111,6 +121,7 @@ cd ~/.ronkbot
 ## 📖 What the Installer Does
 
 The interactive wizard will:
+
 1. ✅ Check prerequisites (Docker, Git)
 2. 🤖 Guide you through Telegram bot creation
 3. 🔑 Help you get Gemini API key  
@@ -135,16 +146,17 @@ ronkbot help       # Show all commands
 
 ### Manual Setup (If You Prefer)
 
-See [MANUAL_SETUP.md](docs/MANUAL_SETUP.md) for step-by-step manual configuration.
+For manual configuration, follow the steps below or refer to `docs/COMMANDS.md` for the full command reference.
 
 This will:
+
 - Pull the n8n Docker image
 - Start the containers
 - Set up the local database
 
 ### 4. Configure n8n
 
-1. Open http://localhost:5678 in your browser
+1. Open <http://localhost:5678> in your browser
 2. Login with credentials from your `.env` file
 3. Add credentials:
    - **Telegram API**: Add your bot token
@@ -152,7 +164,7 @@ This will:
 4. Import the workflows from `n8n-workflows/` folder
 5. Activate all workflows
 
-### 5. Start Chatting!
+### 5. Start Chatting
 
 Send a message to your bot on Telegram:
 
@@ -161,6 +173,7 @@ Hello!
 ```
 
 Try the commands:
+
 - `/help` - Show available commands
 - `/status` - Check system status
 - `/remember I love pizza` - Save a fact
@@ -171,9 +184,11 @@ Try the commands:
 ## 📚 Available Commands
 
 ### Natural Chat
+
 Just message the bot naturally - no commands needed!
 
 Examples:
+
 - "What's the weather like?"
 - "Remind me to call mom tomorrow"
 - "How much disk space do I have?"
@@ -243,11 +258,22 @@ ronkbot/
 ├── n8n-workflows/          # Workflow JSON files
 │   ├── 01-telegram-listener.json
 │   ├── 02-gemini-chat.json
-│   └── 03-command-handler.json
+│   ├── 03-command-handler.json
+│   ├── 04-gmail-authentication.json
+│   ├── 05-email-reader.json
+│   └── 06-email-sender.json
 ├── scripts/                # Helper scripts
 │   ├── install.sh
 │   ├── start.sh
 │   └── backup.sh
+├── tests/                  # Automated tests
+│   ├── run-tests.sh
+│   ├── test-json-valid.sh
+│   ├── test-shellcheck.sh
+│   └── test-docker-build.sh
+├── .github/
+│   └── workflows/
+│       └── ci.yml          # GitHub Actions CI
 ├── data/                   # Persistent data (gitignored)
 │   └── sqlite/
 └── docs/
@@ -299,11 +325,13 @@ docker-compose restart
 ### Bot Not Responding?
 
 1. Check if n8n is running:
+
    ```bash
    docker-compose ps
    ```
 
 2. Check logs:
+
    ```bash
    docker-compose logs -f
    ```
@@ -351,6 +379,7 @@ You can help with: [LIST CAPABILITIES]
 ### Adding WhatsApp Support
 
 You can extend this to support WhatsApp Business API:
+
 1. Apply for WhatsApp Business API
 2. Add WhatsApp trigger node
 3. Reuse the same AI and command handlers
@@ -358,6 +387,7 @@ You can extend this to support WhatsApp Business API:
 ### Integration with Other Services
 
 n8n supports 400+ integrations. You can easily add:
+
 - Gmail (read/send emails)
 - Google Calendar (check/create events)
 - GitHub (repository operations)
@@ -390,6 +420,41 @@ Contributions are welcome! Please:
 ## 📝 License
 
 MIT License - feel free to use this for personal or commercial projects.
+
+---
+
+## 📱 Remote Control from iPhone
+
+Control ronkbot from your iPhone via Telegram:
+
+| Command | What it does |
+|---------|-------------|
+| `/system status` | Check if bot is running |
+| `/system restart` | Restart the container (~30s downtime) |
+| `/system stop` | Stop the bot |
+| `/system wake` | Check Mac power/sleep status |
+
+> **Owner only** — commands are restricted to `TELEGRAM_OWNER_USERNAME`.
+
+### Starting ronkbot from iPhone
+
+When the bot is stopped, start it with one tap using a macOS Shortcut:
+
+```bash
+bash scripts/create-shortcut.sh
+```
+
+This creates a **Start ronkbot** Shortcut that syncs to your iPhone via iCloud. Long-press it → **Add to Home Screen** for one-tap startup.
+
+### Lid Closed Operation
+
+By default, closing your MacBook lid puts it to sleep (pausing ronkbot). To keep it awake:
+
+1. **Plug in** your Mac to power
+2. Install [**Amphetamine**](https://apps.apple.com/us/app/amphetamine/id937984704) (free, Mac App Store)
+3. Enable "Keep Awake" → check **Closed Lid Support**
+
+Run `/system wake` from your iPhone anytime to check the current sleep status.
 
 ---
 

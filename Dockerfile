@@ -1,24 +1,21 @@
-FROM n8nio/n8n:latest
+FROM n8nio/n8n:1.82.1
 
-LABEL maintainer="ronkbot"
-LABEL description="Personal AI Assistant with Telegram and Gemini"
+LABEL maintainer="rohankag"
+LABEL description="Personal AI Assistant — Telegram + n8n + Gemini"
+LABEL org.opencontainers.image.source="https://github.com/rohankag/ronkbot"
+LABEL org.opencontainers.image.licenses="MIT"
 
-# Install additional dependencies
 USER root
-RUN apk add --no-cache \
-    sqlite \
-    curl \
-    jq
+# Pull the docker CLI binary from the official minimal docker image
+# (n8n has no package manager so we copy the binary directly)
+COPY --from=docker:cli /usr/local/bin/docker /usr/local/bin/docker
 
-# Create app directory
-WORKDIR /app
+USER node
 
-# Copy workflow files
-COPY n8n-workflows /app/workflows
-COPY scripts /app/scripts
-
-# Set proper permissions
-RUN chmod +x /app/scripts/*.sh
+# Copy pre-built workflows so they're available inside the container without
+# needing a host volume mount. Users who want to customise workflows can still
+# override by mounting their own directory at /home/node/.n8n/workflows.
+COPY --chown=node:node n8n-workflows/ /home/node/.n8n/workflows/
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
@@ -27,6 +24,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 # Expose n8n port
 EXPOSE 5678
 
-# Start n8n
-USER node
-CMD ["n8n"]
+# Inherit entrypoint from parent image:  tini -- /docker-entrypoint.sh

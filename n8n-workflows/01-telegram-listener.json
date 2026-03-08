@@ -1,82 +1,177 @@
 {
   "name": "01 - Telegram Listener",
+  "description": null,
+  "active": true,
+  "isArchived": false,
   "nodes": [
     {
+      "id": "t0",
+      "name": "Telegram Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        300
+      ],
       "parameters": {
-        "updates": ["message"],
-        "additionalFields": {}
+        "path": "telegram-bot-webhook",
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "options": {}
       },
-      "name": "Telegram Trigger",
-      "type": "n8n-nodes-base.telegramTrigger",
-      "typeVersion": 1,
-      "position": [250, 300],
-      "webhookId": "telegram-bot-webhook",
-      "credentials": {
-        "telegramApi": {
-          "id": "telegram-credentials",
-          "name": "ronku_bot"
-        }
-      }
+      "webhookId": "telegram-bot-webhook"
     },
     {
-      "parameters": {
-        "jsCode": "// Extract message data from Telegram\nconst message = $input.first().json.message;\n\n// Get user info\nconst userId = message.from.id;\nconst username = message.from.username || message.from.first_name;\nconst chatId = message.chat.id;\nconst text = message.text || '';\n\n// Check if it's the owner (ronkuwonku)\nconst isOwner = username === 'ronkuwonku';\n\n// Determine if it's a command\nconst isCommand = text.startsWith('/');\nconst command = isCommand ? text.split(' ')[0].toLowerCase() : null;\n\n// Return structured data\nreturn [{\n  json: {\n    userId: userId.toString(),\n    username: username,\n    chatId: chatId.toString(),\n    text: text,\n    isCommand: isCommand,\n    command: command,\n    isOwner: isOwner,\n    timestamp: new Date().toISOString()\n  }\n}];"
-      },
+      "id": "t1",
       "name": "Extract Message Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [450, 300]
+      "position": [
+        420,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Extract message data from Webhook body + owner check\nconst raw = $input.first().json;\nconst body = raw.body || raw;\nconst msg = body.message || body;\nconst userId = msg?.from?.id || 0;\nconst username = msg?.from?.username || '';\nconst firstName = msg?.from?.first_name || '';\nconst text = msg?.text || '';\nconst chatId = msg?.chat?.id || 0;\nconst OWNER = $env.TELEGRAM_OWNER_USERNAME || '__OWNER_NOT_SET__';\nconst isOwner = username.toLowerCase() === OWNER.toLowerCase();\nconst isCommand = text.startsWith('/');\n// Expose as 'text' and 'message' — workflow 02 AI Agent reads 'message'\nreturn [{ json: { userId, username, firstName, text, message: text, chatId, isCommand, isOwner } }];"
+      }
     },
     {
+      "id": "t2",
+      "name": "Is Owner?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        640,
+        300
+      ],
       "parameters": {
         "conditions": {
           "options": {
-            "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "rightValue": "",
+            "caseSensitive": true
           },
+          "combinator": "and",
           "conditions": [
             {
-              "id": "condition-1",
-              "leftValue": "={{ $json.isCommand }}",
-              "rightValue": "true",
+              "leftValue": "={{ $json.isOwner }}",
+              "rightValue": true,
               "operator": {
                 "type": "boolean",
                 "operation": "equals"
               }
             }
-          ],
-          "combinator": "and"
+          ]
         }
+      }
+    },
+    {
+      "id": "t3",
+      "name": "Reject Access",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        860,
+        500
+      ],
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "⛔ This bot is private. Access denied.",
+        "additionalFields": {}
       },
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram Bot (auto)"
+        }
+      }
+    },
+    {
+      "id": "t4",
       "name": "Is Command?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [650, 300]
+      "position": [
+        860,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "rightValue": "",
+            "caseSensitive": true
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.isCommand }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      }
     },
     {
-      "parameters": {
-        "workflowId": "={{$workflow.id}}",
-        "options": {}
-      },
+      "id": "t5",
       "name": "Execute Command Handler",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [850, 200]
+      "position": [
+        1080,
+        200
+      ],
+      "parameters": {
+        "workflowId": "__REWRITTEN_AT_STARTUP__",
+        "options": {}
+      }
     },
     {
+      "id": "t6-typing",
+      "name": "Send Typing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        420
+      ],
       "parameters": {
-        "workflowId": "={{$workflow.id}}",
-        "options": {}
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendChatAction",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $json.chatId, action: 'typing' }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 3000
+        }
       },
-      "name": "Execute Gemini Chat",
+      "continueOnFail": true
+    },
+    {
+      "id": "t7",
+      "name": "Execute AI Chat",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [850, 400]
+      "position": [
+        1300,
+        420
+      ],
+      "parameters": {
+        "workflowId": "__REWRITTEN_AT_STARTUP__",
+        "options": {}
+      }
     }
   ],
   "connections": {
-    "Telegram Trigger": {
+    "Telegram Webhook": {
       "main": [
         [
           {
@@ -91,7 +186,25 @@
       "main": [
         [
           {
+            "node": "Is Owner?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Owner?": {
+      "main": [
+        [
+          {
             "node": "Is Command?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject Access",
             "type": "main",
             "index": 0
           }
@@ -109,7 +222,18 @@
         ],
         [
           {
-            "node": "Execute Gemini Chat",
+            "node": "Send Typing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Typing": {
+      "main": [
+        [
+          {
+            "node": "Execute AI Chat",
             "type": "main",
             "index": 0
           }
@@ -119,8 +243,12 @@
   },
   "settings": {
     "executionOrder": "v1",
-    "errorWorkflow": ""
+    "errorWorkflow": "",
+    "callerPolicy": "any"
   },
   "staticData": null,
-  "tags": ["ronku-bot", "telegram"]
+  "meta": null,
+  "pinData": null,
+  "tags": [],
+  "parentFolder": null
 }

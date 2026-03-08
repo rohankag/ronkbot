@@ -2,7 +2,7 @@
 
 echo "🚀 Starting ronkbot..."
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 
 # Check which docker compose command is available
 if docker compose version &> /dev/null; then
