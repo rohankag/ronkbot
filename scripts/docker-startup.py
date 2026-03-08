@@ -216,9 +216,11 @@ if not listener_active:
         if not wid:
             continue
         r3 = s.get(BASE + "/rest/workflows/" + wid, timeout=5)
-        vid = r3.json().get("data", r3.json()).get("versionId")
-        ra = s.post(BASE + "/rest/workflows/" + wid + "/activate",
-                    json={"versionId": vid}, timeout=60)
+        wf_data = r3.json().get("data", r3.json())
+        vid = wf_data.get("versionId")
+        # n8n 1.82+ uses PATCH to activate (POST /activate doesn't exist)
+        ra = s.patch(BASE + "/rest/workflows/" + wid,
+                     json={"active": True, "versionId": vid}, timeout=60)
         icon = "✅" if ra.status_code == 200 else "⚠️"
         log(f"  {icon} Activate {name[:44]}: {ra.status_code}")
 
@@ -247,8 +249,8 @@ if not listener_active:
                 s.patch(BASE + "/rest/workflows/" + wid, json=wf_fix, timeout=10)
                 r5 = s.get(BASE + "/rest/workflows/" + wid, timeout=5)
                 vid2 = r5.json().get("data", r5.json()).get("versionId")
-                ra2 = s.post(BASE + "/rest/workflows/" + wid + "/activate",
-                             json={"versionId": vid2}, timeout=60)
+                ra2 = s.patch(BASE + "/rest/workflows/" + wid,
+                              json={"active": True, "versionId": vid2}, timeout=60)
                 if ra2.status_code == 200:
                     log("  ✅ Listener activated in AI-only mode (commands disabled until email workflows install)")
                 else:
