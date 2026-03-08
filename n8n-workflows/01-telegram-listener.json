@@ -1,7 +1,4 @@
 {
-  "updatedAt": "2026-03-02T02:25:22.860Z",
-  "createdAt": "2026-03-01T16:14:16.319Z",
-  "id": "MFFOeZYrfBFvle3C",
   "name": "01 - Telegram Listener",
   "description": null,
   "active": true,
@@ -34,7 +31,7 @@
         300
       ],
       "parameters": {
-        "jsCode": "// Extract message data from Webhook body + owner check\nconst raw = $input.first().json;\nconst body = raw.body || raw;\nconst msg = body.message || body;\nconst userId = msg?.from?.id || 0;\nconst username = msg?.from?.username || '';\nconst firstName = msg?.from?.first_name || '';\nconst text = msg?.text || '';\nconst chatId = msg?.chat?.id || 0;\nconst OWNER = $env.TELEGRAM_OWNER_USERNAME || '__OWNER_NOT_SET__';\nconst isOwner = username.toLowerCase() === OWNER.toLowerCase();\nconst isCommand = text.startsWith('/');\n// Expose as 'text' and 'message' \u2014 workflow 02 AI Agent reads 'message'\nreturn [{ json: { userId, username, firstName, text, message: text, chatId, isCommand, isOwner } }];"
+        "jsCode": "// Extract message data from Webhook body + owner check\nconst raw = $input.first().json;\nconst body = raw.body || raw;\nconst msg = body.message || body;\nconst userId = msg?.from?.id || 0;\nconst username = msg?.from?.username || '';\nconst firstName = msg?.from?.first_name || '';\nconst text = msg?.text || '';\nconst chatId = msg?.chat?.id || 0;\nconst OWNER = $env.TELEGRAM_OWNER_USERNAME || '__OWNER_NOT_SET__';\nconst isOwner = username.toLowerCase() === OWNER.toLowerCase();\nconst isCommand = text.startsWith('/');\n// Expose as 'text' and 'message' — workflow 02 AI Agent reads 'message'\nreturn [{ json: { userId, username, firstName, text, message: text, chatId, isCommand, isOwner } }];"
       }
     },
     {
@@ -78,7 +75,7 @@
       ],
       "parameters": {
         "chatId": "={{ $json.chatId }}",
-        "text": "\u26d4 This bot is private. Access denied.",
+        "text": "⛔ This bot is private. Access denied.",
         "additionalFields": {}
       },
       "credentials": {
@@ -128,7 +125,7 @@
         200
       ],
       "parameters": {
-        "workflowId": "keOVx0dPPyJHSy0F",
+        "workflowId": "__REWRITTEN_AT_STARTUP__",
         "options": {}
       }
     },
@@ -168,7 +165,7 @@
         420
       ],
       "parameters": {
-        "workflowId": "9DZG7ATHJgxMyJvy",
+        "workflowId": "__REWRITTEN_AT_STARTUP__",
         "options": {}
       }
     }
@@ -252,289 +249,6 @@
   "staticData": null,
   "meta": null,
   "pinData": null,
-  "versionId": "74b9259c-35f1-40a4-9e83-19bc4f07a8e8",
-  "activeVersionId": "74b9259c-35f1-40a4-9e83-19bc4f07a8e8",
-  "versionCounter": 43,
-  "triggerCount": 1,
-  "shared": [
-    {
-      "updatedAt": "2026-03-01T16:14:16.321Z",
-      "createdAt": "2026-03-01T16:14:16.321Z",
-      "role": "workflow:owner",
-      "workflowId": "MFFOeZYrfBFvle3C",
-      "projectId": "sad96knim2PfRj77",
-      "project": {
-        "updatedAt": "2026-03-01T16:13:29.597Z",
-        "createdAt": "2026-03-01T16:13:08.637Z",
-        "id": "sad96knim2PfRj77",
-        "name": "",
-        "type": "personal",
-        "icon": null,
-        "description": null,
-        "creatorId": "93c8237b-8a74-406e-8062-c2012097f011",
-        "projectRelations": [
-          {
-            "updatedAt": "2026-03-01T16:13:08.637Z",
-            "createdAt": "2026-03-01T16:13:08.637Z",
-            "userId": "93c8237b-8a74-406e-8062-c2012097f011",
-            "projectId": "sad96knim2PfRj77",
-            "user": {
-              "updatedAt": "2026-03-02T02:23:38.000Z",
-              "createdAt": "2026-03-01T16:13:08.512Z",
-              "id": "93c8237b-8a74-406e-8062-c2012097f011",
-              "email": "",
-              "firstName": "Rohan",
-              "lastName": "Agarwal",
-              "personalizationAnswers": null,
-              "settings": {
-                "userActivated": true,
-                "firstSuccessfulWorkflowId": "MFFOeZYrfBFvle3C",
-                "userActivatedAt": 1772382295888
-              },
-              "disabled": false,
-              "mfaEnabled": false,
-              "lastActiveAt": "2026-03-02",
-              "isPending": false
-            }
-          }
-        ]
-      }
-    }
-  ],
   "tags": [],
-  "parentFolder": null,
-  "activeVersion": {
-    "updatedAt": "2026-03-02T02:25:22.862Z",
-    "createdAt": "2026-03-02T02:25:22.862Z",
-    "versionId": "74b9259c-35f1-40a4-9e83-19bc4f07a8e8",
-    "workflowId": "MFFOeZYrfBFvle3C",
-    "nodes": [
-      {
-        "id": "t0",
-        "name": "Telegram Webhook",
-        "type": "n8n-nodes-base.webhook",
-        "typeVersion": 2,
-        "position": [
-          200,
-          300
-        ],
-        "parameters": {
-          "path": "telegram-bot-webhook",
-          "httpMethod": "POST",
-          "responseMode": "onReceived",
-          "options": {}
-        },
-        "webhookId": "telegram-bot-webhook"
-      },
-      {
-        "id": "t1",
-        "name": "Extract Message Data",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [
-          420,
-          300
-        ],
-        "parameters": {
-          "jsCode": "// Extract message data from Webhook body + owner check\nconst raw = $input.first().json;\n// Webhook node puts Telegram payload under .body\nconst body = raw.body || raw;\nconst message = body.message || body;\nconst userId = message?.from?.id || 0;\nconst username = message?.from?.username || '';\nconst firstName = message?.from?.first_name || '';\nconst text = message?.text || '';\nconst chatId = message?.chat?.id || 0;\nconst OWNER = ($env && $env.TELEGRAM_OWNER_USERNAME) || 'owner';\nconst isOwner = username.toLowerCase() === OWNER.toLowerCase();\nconst isCommand = text.startsWith('/');\nreturn [{ json: { userId, username, firstName, text, chatId, isCommand, isOwner } }];"
-        }
-      },
-      {
-        "id": "t2",
-        "name": "Is Owner?",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2,
-        "position": [
-          640,
-          300
-        ],
-        "parameters": {
-          "conditions": {
-            "options": {
-              "leftValue": "",
-              "rightValue": "",
-              "caseSensitive": true
-            },
-            "combinator": "and",
-            "conditions": [
-              {
-                "leftValue": "={{ $json.isOwner }}",
-                "rightValue": true,
-                "operator": {
-                  "type": "boolean",
-                  "operation": "equals"
-                }
-              }
-            ]
-          }
-        }
-      },
-      {
-        "id": "t3",
-        "name": "Reject Access",
-        "type": "n8n-nodes-base.telegram",
-        "typeVersion": 1.2,
-        "position": [
-          860,
-          500
-        ],
-        "parameters": {
-          "chatId": "={{ $json.chatId }}",
-          "text": "\u26d4 This bot is private. Access denied.",
-          "additionalFields": {}
-        },
-        "credentials": {
-          "telegramApi": {
-            "id": "I2otwuOTdlpSPFji",
-            "name": "ronku_bot"
-          }
-        }
-      },
-      {
-        "id": "t4",
-        "name": "Is Command?",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 2,
-        "position": [
-          860,
-          300
-        ],
-        "parameters": {
-          "conditions": {
-            "options": {
-              "leftValue": "",
-              "rightValue": "",
-              "caseSensitive": true
-            },
-            "combinator": "and",
-            "conditions": [
-              {
-                "leftValue": "={{ $json.isCommand }}",
-                "rightValue": true,
-                "operator": {
-                  "type": "boolean",
-                  "operation": "equals"
-                }
-              }
-            ]
-          }
-        }
-      },
-      {
-        "id": "t5",
-        "name": "Execute Command Handler",
-        "type": "n8n-nodes-base.executeWorkflow",
-        "typeVersion": 1,
-        "position": [
-          1080,
-          200
-        ],
-        "parameters": {
-          "workflowId": "keOVx0dPPyJHSy0F",
-          "options": {}
-        }
-      },
-      {
-        "id": "t7",
-        "name": "Execute AI Chat",
-        "type": "n8n-nodes-base.executeWorkflow",
-        "typeVersion": 1,
-        "position": [
-          1300,
-          400
-        ],
-        "parameters": {
-          "workflowId": "9DZG7ATHJgxMyJvy",
-          "options": {}
-        }
-      }
-    ],
-    "connections": {
-      "Telegram Webhook": {
-        "main": [
-          [
-            {
-              "node": "Extract Message Data",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Extract Message Data": {
-        "main": [
-          [
-            {
-              "node": "Is Owner?",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Is Owner?": {
-        "main": [
-          [
-            {
-              "node": "Is Command?",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "Reject Access",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Is Command?": {
-        "main": [
-          [
-            {
-              "node": "Execute Command Handler",
-              "type": "main",
-              "index": 0
-            }
-          ],
-          [
-            {
-              "node": "Execute AI Chat",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      }
-    },
-    "authors": "",
-    "name": null,
-    "description": null,
-    "autosaved": false,
-    "workflowPublishHistory": [
-      {
-        "createdAt": "2026-03-02T02:25:22.907Z",
-        "id": 67,
-        "workflowId": "MFFOeZYrfBFvle3C",
-        "versionId": "74b9259c-35f1-40a4-9e83-19bc4f07a8e8",
-        "event": "activated",
-        "userId": "93c8237b-8a74-406e-8062-c2012097f011"
-      }
-    ]
-  },
-  "scopes": [
-    "workflow:create",
-    "workflow:delete",
-    "workflow:execute",
-    "workflow:execute-chat",
-    "workflow:list",
-    "workflow:move",
-    "workflow:publish",
-    "workflow:read",
-    "workflow:share",
-    "workflow:update"
-  ],
-  "checksum": "8e3d480a1a936512ded82fe90c42b24faa7d1fe000ffdc3aa280c4cde1cc20ab"
+  "parentFolder": null
 }

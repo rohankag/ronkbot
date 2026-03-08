@@ -99,51 +99,55 @@ jobs:
 
           CURRENT_SHA=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['sha'])")
 
-          # Generate updated formula content (base64-encoded for GitHub API)
-          FORMULA=$(cat <<EOF
-class Ronkbot < Formula
-  desc "Personal AI assistant — Telegram + n8n + Gemini, running on your Mac"
-  homepage "https://github.com/rohankag/ronkbot"
-  url "${URL}"
-  sha256 "${SHA256}"
-  license "MIT"
-  version "${VERSION#v}"
+          # Generate formula via Python to avoid YAML/heredoc conflicts
+          python3 -c "
+          import base64, os
+          v = os.environ['VERSION']
+          url = os.environ['URL']
+          sha = os.environ['SHA256']
+          formula = f'''class Ronkbot < Formula
+            desc \"Personal AI assistant - Telegram + n8n + Gemini, running on your Mac\"
+            homepage \"https://github.com/rohankag/ronkbot\"
+            url \"{url}\"
+            sha256 \"{sha}\"
+            license \"MIT\"
+            version \"{v.lstrip('v')}\"
 
-  depends_on :macos
-  depends_on "docker" => :build
+            depends_on :macos
+            depends_on \"docker\" => :build
 
-  def install
-    prefix.install Dir["*"]
+            def install
+              prefix.install Dir[\"*\"]
+              (bin/\"ronkbot\").write <<~EOS
+                #!/usr/bin/env bash
+                export RONKBOT_INSTALL_DIR=\"#{{prefix}}\"
+                exec bash \"#{{prefix}}/install.sh\" \"\\\$@\"
+              EOS
+              chmod 0755, bin/\"ronkbot\"
+            end
 
-    # Install the ronkbot CLI wrapper
-    (bin/"ronkbot").write <<~EOS
-      #!/usr/bin/env bash
-      export RONKBOT_INSTALL_DIR="#{prefix}"
-      exec bash "#{prefix}/install.sh" "\$@"
-    EOS
-    chmod 0755, bin/"ronkbot"
-  end
+            def post_install
+              ohai \"ronkbot #{{version}} installed!\"
+              puts <<~EOS
 
-  def post_install
-    ohai "ronkbot #{version} installed!"
-    puts <<~EOS
+                To set up your personal AI bot, run:
+                  ronkbot config
 
-      To set up your personal AI bot, run:
-        ronkbot config
+                Documentation: https://github.com/rohankag/ronkbot
 
-      Documentation: https://github.com/rohankag/ronkbot
+              EOS
+            end
 
-    EOS
-  end
+            test do
+              assert_match \"usage\", shell_output(\"#{{bin}}/ronkbot help 2>&1\", 0)
+            end
+          end
+          '''
+          encoded = base64.b64encode(formula.encode()).decode()
+          print(encoded)
+          " > /tmp/formula_b64.txt
 
-  test do
-    assert_match "usage", shell_output("#{bin}/ronkbot help 2>&1", 0)
-  end
-end
-EOF
-)
-
-          ENCODED=$(echo "$FORMULA" | base64 -w 0)
+          ENCODED=$(cat /tmp/formula_b64.txt)
 
           # Commit updated formula to tap repo
           curl -s -X PUT \

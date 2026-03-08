@@ -12,9 +12,15 @@ import os, json, glob, time, requests, sys
 BASE  = os.environ.get("N8N_URL", "http://n8n:5678")
 USER  = os.environ.get("N8N_USER", os.environ.get("N8N_OWNER_EMAIL", ""))
 PASS  = os.environ.get("N8N_PASS", "")
-TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-NGROK = os.environ.get("NGROK_URL", "")
-WF_DIR= "/workflows"
+TOKEN  = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+NGROK  = os.environ.get("NGROK_URL", "")
+GEMINI = os.environ.get("GEMINI_API_KEY", "")
+WF_DIR = "/workflows"
+
+# Derive first/last name from OWNER_NAME (fallback to generic)
+_owner_name = os.environ.get("OWNER_NAME", "Bot Owner").strip().split()
+OWNER_FIRST = _owner_name[0] if _owner_name else "Bot"
+OWNER_LAST  = " ".join(_owner_name[1:]) if len(_owner_name) > 1 else "Owner"
 
 def log(msg): print(msg, flush=True)
 
@@ -47,8 +53,8 @@ if needs_setup:
     log("🔧 Running first-time owner setup...")
     r_setup = s.post(BASE + "/rest/owner/setup", json={
         "email": USER,
-        "firstName": "Rohan",
-        "lastName": "Agarwal",
+        "firstName": OWNER_FIRST,
+        "lastName": OWNER_LAST,
         "password": PASS,
     }, timeout=30)
     log(f"  Owner setup: {r_setup.status_code}")
@@ -89,6 +95,30 @@ if not tg_creds:
 else:
     TELEGRAM_CRED_ID = tg_creds[0]["id"]
     log(f"  ✅ Credential exists: {TELEGRAM_CRED_ID}")
+
+# ── 5b. Ensure Gemini credential exists ──────────────────────────────────────
+GEMINI_CRED_ID = None
+if GEMINI:
+    log("🔑 Checking Gemini credential...")
+    r_creds2 = s.get(BASE + "/rest/credentials?filter=%7B%22type%22:%22googlePalmApi%22%7D", timeout=5)
+    gm_creds = r_creds2.json().get("data", [])
+    if not gm_creds:
+        log("  Creating googlePalmApi credential...")
+        r_gm = s.post(BASE + "/rest/credentials", json={
+            "name": "Google Gemini (auto)",
+            "type": "googlePalmApi",
+            "data": {"apiKey": GEMINI}
+        }, timeout=10)
+        if r_gm.status_code in (200, 201):
+            GEMINI_CRED_ID = r_gm.json().get("data", r_gm.json()).get("id", "?")
+            log(f"  ✅ Created Gemini credential: {GEMINI_CRED_ID}")
+        else:
+            log(f"  ❌ Gemini credential creation failed: {r_gm.text[:100]}")
+    else:
+        GEMINI_CRED_ID = gm_creds[0]["id"]
+        log(f"  ✅ Gemini credential exists: {GEMINI_CRED_ID}")
+else:
+    log("⚠️  GEMINI_API_KEY not set — skipping Gemini credential")
 
 
 r = s.get(BASE + "/rest/workflows?filter=%7B%7D&skip=0&take=20", timeout=5)
@@ -156,6 +186,21 @@ if not listener_active:
             patch_r = s.patch(BASE + "/rest/workflows/" + lst_id, json=wf01, timeout=10)
             log(f"  🔧 Fixed Execute refs + credential IDs in 01-Listener ({patch_r.status_code})")
 
+    # Fix Gemini credential ID in 02-AI Chat workflow
+    if ai_id and GEMINI_CRED_ID:
+        r_ai = s.get(BASE + "/rest/workflows/" + ai_id, timeout=5)
+        wf02 = r_ai.json().get("data", r_ai.json())
+        changed2 = False
+        for node in wf02.get("nodes", []):
+            for cred_type, cred_info in node.get("credentials", {}).items():
+                if cred_type == "googlePalmApi":
+                    if cred_info.get("id") != GEMINI_CRED_ID:
+                        cred_info["id"] = GEMINI_CRED_ID
+                        cred_info["name"] = "Google Gemini (auto)"
+                        changed2 = True
+        if changed2:
+            patch_r2 = s.patch(BASE + "/rest/workflows/" + ai_id, json=wf02, timeout=10)
+            log(f"  🔧 Wired Gemini credential into 02-AI Chat ({patch_r2.status_code})")
 
     # Activate in dependency order: leaf → root
     ACTIVATE_ORDER = [
