@@ -64,6 +64,8 @@ services:
       - N8N_PASS=${N8N_BASIC_AUTH_PASSWORD}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - NGROK_URL=${NGROK_URL}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - OWNER_NAME=${OWNER_NAME}
     volumes:
       - ./n8n-workflows:/workflows:ro
       - ./scripts:/scripts:ro
