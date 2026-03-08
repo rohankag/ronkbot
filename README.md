@@ -68,6 +68,25 @@ This interactive wizard will guide you through setup in 5-10 minutes.
 
 ---
 
+## 🌐 Ngrok Setup (Required)
+
+Telegram needs a **public HTTPS URL** to deliver messages to your bot. Since ronkbot runs locally, you need a tunnel.
+
+```bash
+# Install ngrok
+brew install ngrok
+
+# Add your auth token (from dashboard.ngrok.com)
+ngrok config add-authtoken YOUR_TOKEN
+
+# Start a tunnel
+ngrok http 5678 --domain=your-domain.ngrok-free.app
+```
+
+> 📖 **Full guide:** [docs/NGROK_SETUP.md](docs/NGROK_SETUP.md) — covers account setup, free static domains, and troubleshooting.
+
+---
+
 ### 🔒 Security Note
 
 The installer uses `curl | bash` for convenience. To verify the script first:
@@ -164,7 +183,25 @@ This will:
 4. Import the workflows from `n8n-workflows/` folder
 5. Activate all workflows
 
-### 5. Start Chatting
+### 5. Start the Mac Agent (Optional)
+
+The mac-agent gives your bot local superpowers — system commands, file access, persistent memory, and a self-healing watchdog:
+
+```bash
+cd scripts/mac-agent
+pip install -r requirements.txt
+python3 server.py
+```
+
+In a separate terminal, start the watchdog (auto-restarts the agent and keeps ngrok tunnels alive):
+
+```bash
+python3 watchdog.py
+```
+
+> The mac-agent runs on `localhost:4242` and is called by n8n workflows when the bot needs to execute tools, read files, or access its memory.
+
+### 6. Start Chatting
 
 Send a message to your bot on Telegram:
 
@@ -210,21 +247,30 @@ Examples:
 
 ## ⚙️ Configuration
 
-Edit `.env` file to customize:
+Edit `.env` file to customize (see `config.example.env` for all options):
 
 ```bash
 # Bot Configuration
 TELEGRAM_BOT_TOKEN=your_token_here
 TELEGRAM_BOT_NAME=your_bot_name
 TELEGRAM_OWNER_USERNAME=your_telegram_username
+TELEGRAM_OWNER_CHAT_ID=your_chat_id
+
+# Owner
+OWNER_NAME=Your Name
 
 # AI Configuration
 GEMINI_API_KEY=your_key_here
 GEMINI_MODEL=gemini-3-flash  # or gemini-3-pro
 
+# Ngrok (required for Telegram webhook)
+NGROK_URL=https://your-domain.ngrok-free.app
+NGROK_DOMAIN=your-domain.ngrok-free.app
+
 # Security
 N8N_BASIC_AUTH_USER=admin
 N8N_BASIC_AUTH_PASSWORD=strong_password_here
+N8N_ENCRYPTION_KEY=          # openssl rand -hex 32
 
 # System Access (comma-separated paths)
 ALLOWED_DIRECTORIES=/Users/yourname/Documents,/Users/yourname/Projects
@@ -232,6 +278,13 @@ ALLOWED_DIRECTORIES=/Users/yourname/Documents,/Users/yourname/Projects
 # Allowed shell commands (comma-separated)
 ALLOWED_COMMANDS=df,du,git,ls,cat,ps,top,whoami,pwd,date,cal
 ```
+
+### 🔍 Finding Your Telegram Chat ID
+
+1. Start your bot and send it any message
+2. Visit: `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates`
+3. Look for `"chat":{"id":123456789}` — that number is your chat ID
+4. Add it to `.env` as `TELEGRAM_OWNER_CHAT_ID=123456789`
 
 ---
 
@@ -253,7 +306,7 @@ ALLOWED_COMMANDS=df,du,git,ls,cat,ps,top,whoami,pwd,date,cal
 ronkbot/
 ├── docker-compose.yml      # Docker configuration
 ├── .env                    # Your secrets (gitignored)
-├── .env.example            # Template for new users
+├── config.example.env      # Template for new users
 ├── README.md               # This file
 ├── n8n-workflows/          # Workflow JSON files
 │   ├── 01-telegram-listener.json
@@ -274,10 +327,15 @@ ronkbot/
 ├── .github/
 │   └── workflows/
 │       └── ci.yml          # GitHub Actions CI
-├── data/                   # Persistent data (gitignored)
-│   └── sqlite/
-└── docs/
-    └── COMMANDS.md         # Detailed command reference
+├── docs/
+│   ├── COMMANDS.md         # Detailed command reference
+│   ├── EMAIL_SETUP.md      # Gmail OAuth guide
+│   └── NGROK_SETUP.md      # Ngrok tunnel setup
+└── scripts/mac-agent/      # Local AI agent
+    ├── server.py           # Tool server (brain, shell, files)
+    ├── brain.py            # 5-layer memory system
+    ├── watchdog.py         # Self-healing process monitor
+    └── requirements.txt
 ```
 
 ### Adding New Features

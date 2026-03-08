@@ -1,0 +1,104 @@
+{
+    "name": "07 - Nightly Reflection",
+    "nodes": [
+        {
+            "id": "trig",
+            "name": "Midnight ET",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                100,
+                300
+            ],
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "0 5 * * *"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "id": "n-owner",
+            "name": "Get Owner",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                320,
+                300
+            ],
+            "parameters": {
+                "method": "GET",
+                "url": "http://host.docker.internal:4242/brain/owner",
+                "options": {
+                    "timeout": 5000
+                }
+            }
+        },
+        {
+            "id": "n-nightly",
+            "name": "Run Nightly",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                540,
+                300
+            ],
+            "parameters": {
+                "method": "POST",
+                "url": "http://host.docker.internal:4242/brain/nightly",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "chat_id",
+                            "value": "={{ $('Get Owner').item.json.chat_id }}"
+                        }
+                    ]
+                },
+                "options": {
+                    "response": {
+                        "response": {
+                            "neverError": true
+                        }
+                    },
+                    "timeout": 90000
+                }
+            },
+            "continueOnFail": true
+        }
+    ],
+    "connections": {
+        "Midnight ET": {
+            "main": [
+                [
+                    {
+                        "node": "Get Owner",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Owner": {
+            "main": [
+                [
+                    {
+                        "node": "Run Nightly",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "meta": {
+        "description": "Triggers nightly reflection + journal at midnight ET (05:00 UTC). One Groq LLM call produces both reflection lesson and inner journal entry. 90s timeout to give the AI call time to complete."
+    }
+}

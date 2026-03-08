@@ -1,0 +1,246 @@
+{
+    "name": "12 - Todo Reminder",
+    "nodes": [
+        {
+            "id": "trig",
+            "name": "Every 15 Minutes",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                100,
+                300
+            ],
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "minutes",
+                            "minutesInterval": 15
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "id": "n-owner",
+            "name": "Get Owner",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                320,
+                300
+            ],
+            "parameters": {
+                "method": "GET",
+                "url": "http://host.docker.internal:4242/brain/owner",
+                "options": {
+                    "timeout": 5000
+                }
+            }
+        },
+        {
+            "id": "n-todos",
+            "name": "Get Due Reminders",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                540,
+                300
+            ],
+            "parameters": {
+                "method": "GET",
+                "url": "http://host.docker.internal:4242/brain/todos",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "chat_id",
+                            "value": "={{ $('Get Owner').item.json.chat_id }}"
+                        },
+                        {
+                            "name": "due_soon",
+                            "value": "15"
+                        }
+                    ]
+                },
+                "options": {
+                    "response": {
+                        "response": {
+                            "neverError": true
+                        }
+                    },
+                    "timeout": 5000
+                }
+            }
+        },
+        {
+            "id": "n-has-todos",
+            "name": "Any Reminders?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                760,
+                300
+            ],
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict"
+                    },
+                    "conditions": [
+                        {
+                            "id": "c1",
+                            "leftValue": "={{ $json.count }}",
+                            "rightValue": 0,
+                            "operator": {
+                                "type": "number",
+                                "operation": "gt"
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "id": "n-split",
+            "name": "Split Todos",
+            "type": "n8n-nodes-base.splitOut",
+            "typeVersion": 1,
+            "position": [
+                980,
+                200
+            ],
+            "parameters": {
+                "fieldToSplitOut": "todos",
+                "options": {}
+            }
+        },
+        {
+            "id": "n-send",
+            "name": "Send Reminder",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                1200,
+                200
+            ],
+            "parameters": {
+                "chatId": "={{ $('Get Owner').item.json.chat_id }}",
+                "text": "⏰ *Reminder:* {{ $json.task }}\n{{ $json.due_at ? '_Due: ' + $json.due_at.slice(0,16).replace('T',' ') + ' UTC_' : '' }}",
+                "additionalFields": {
+                    "parse_mode": "Markdown"
+                }
+            },
+            "credentials": {
+                "telegramApi": {
+                    "id": "",
+                    "name": "Telegram Bot (auto)"
+                }
+            },
+            "continueOnFail": true
+        },
+        {
+            "id": "n-mark-sent",
+            "name": "Mark Reminder Sent",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1420,
+                200
+            ],
+            "parameters": {
+                "method": "PATCH",
+                "url": "=http://host.docker.internal:4242/brain/todo/{{ $json.id }}",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "{\"reminder_sent\": true}",
+                "options": {
+                    "response": {
+                        "response": {
+                            "neverError": true
+                        }
+                    },
+                    "timeout": 5000
+                }
+            },
+            "continueOnFail": true
+        }
+    ],
+    "connections": {
+        "Every 15 Minutes": {
+            "main": [
+                [
+                    {
+                        "node": "Get Owner",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Owner": {
+            "main": [
+                [
+                    {
+                        "node": "Get Due Reminders",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Due Reminders": {
+            "main": [
+                [
+                    {
+                        "node": "Any Reminders?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Any Reminders?": {
+            "main": [
+                [
+                    {
+                        "node": "Split Todos",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "Split Todos": {
+            "main": [
+                [
+                    {
+                        "node": "Send Reminder",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send Reminder": {
+            "main": [
+                [
+                    {
+                        "node": "Mark Reminder Sent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "meta": {
+        "description": "Polls every 15 minutes for todos with remind_at within the next 15 minutes. Sends Telegram message and marks reminder_sent=true to prevent duplicates."
+    }
+}

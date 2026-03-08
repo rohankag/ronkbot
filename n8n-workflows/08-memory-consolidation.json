@@ -1,0 +1,104 @@
+{
+    "name": "08 - Memory Consolidation",
+    "nodes": [
+        {
+            "id": "trig",
+            "name": "Every 6 Hours",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                100,
+                300
+            ],
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "0 */6 * * *"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "id": "n-owner",
+            "name": "Get Owner",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                320,
+                300
+            ],
+            "parameters": {
+                "method": "GET",
+                "url": "http://host.docker.internal:4242/brain/owner",
+                "options": {
+                    "timeout": 5000
+                }
+            }
+        },
+        {
+            "id": "n-consolidate",
+            "name": "Run Consolidation",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                540,
+                300
+            ],
+            "parameters": {
+                "method": "POST",
+                "url": "http://host.docker.internal:4242/brain/consolidate",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "chat_id",
+                            "value": "={{ $('Get Owner').item.json.chat_id }}"
+                        }
+                    ]
+                },
+                "options": {
+                    "response": {
+                        "response": {
+                            "neverError": true
+                        }
+                    },
+                    "timeout": 30000
+                }
+            },
+            "continueOnFail": true
+        }
+    ],
+    "connections": {
+        "Every 6 Hours": {
+            "main": [
+                [
+                    {
+                        "node": "Get Owner",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Owner": {
+            "main": [
+                [
+                    {
+                        "node": "Run Consolidation",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "meta": {
+        "description": "Runs memory consolidation every 6 hours: prunes stale low-confidence facts, merges facts with same key_topic (keeps top 3), runs WAL checkpoint."
+    }
+}

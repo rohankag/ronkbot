@@ -185,10 +185,13 @@ setup_telegram_new() {
     
     # Extract bot info from token (optional validation)
     TELEGRAM_BOT_TOKEN="$telegram_token"
-    TELEGRAM_BOT_NAME="ronkbot"
     
     echo ""
-    read -p "Enter your Telegram username (without @): " telegram_username
+    read -p "Enter your bot's username (without @, e.g. my_cool_bot): " bot_username
+    TELEGRAM_BOT_NAME="${bot_username:-ronkbot}"
+    
+    echo ""
+    read -p "Enter YOUR Telegram username (without @): " telegram_username
     TELEGRAM_OWNER_USERNAME="$telegram_username"
     
     print_success "Telegram bot configured!"
@@ -199,10 +202,11 @@ setup_telegram_existing() {
     read -p "Enter your existing bot token: " telegram_token
     TELEGRAM_BOT_TOKEN="$telegram_token"
     
-    read -p "Enter your Telegram username (without @): " telegram_username
-    TELEGRAM_OWNER_USERNAME="$telegram_username"
+    read -p "Enter the bot's username (without @): " bot_username
+    TELEGRAM_BOT_NAME="${bot_username:-ronkbot}"
     
-    TELEGRAM_BOT_NAME="ronkbot"
+    read -p "Enter YOUR Telegram username (without @): " telegram_username
+    TELEGRAM_OWNER_USERNAME="$telegram_username"
     
     print_success "Existing bot configured!"
 }
@@ -250,6 +254,58 @@ setup_gemini() {
     GEMINI_MODEL="gemini-3-flash"
     
     print_success "AI configured!"
+}
+
+# ═══════════════════════════════════════════════════════════════
+# NGROK + IDENTITY SETUP
+# ═══════════════════════════════════════════════════════════════
+
+setup_ngrok_and_identity() {
+    print_step "Ngrok + Owner Identity"
+    
+    echo ""
+    echo "Telegram needs a public URL to send messages to your bot."
+    echo "We use ngrok for this. See docs/NGROK_SETUP.md for full guide."
+    echo ""
+    echo "If you don't have ngrok set up yet, you can skip this"
+    echo "and configure it later in your .env file."
+    echo ""
+    read -p "Enter your ngrok URL (or press Enter to skip): " ngrok_url
+    NGROK_URL="${ngrok_url}"
+    
+    # Extract domain from URL (remove https://)
+    if [ -n "$NGROK_URL" ]; then
+        NGROK_DOMAIN="${NGROK_URL#https://}"
+    else
+        NGROK_DOMAIN=""
+    fi
+    
+    echo ""
+    read -p "Enter your full name (for bot personality): " owner_name
+    OWNER_NAME="${owner_name:-Owner}"
+    
+    # Split into first/last
+    OWNER_FIRST_NAME="${OWNER_NAME%% *}"
+    if [[ "$OWNER_NAME" == *" "* ]]; then
+        OWNER_LAST_NAME="${OWNER_NAME#* }"
+    else
+        OWNER_LAST_NAME=""
+    fi
+    
+    echo ""
+    read -p "Enter your n8n login email: " n8n_email
+    N8N_OWNER_EMAIL="${n8n_email}"
+    
+    echo ""
+    echo "${CYAN}ℹ${NC} Your Telegram Chat ID is needed so the bot only responds to you."
+    echo "  To find it: send any message to your bot, then visit:"
+    echo "  https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates"
+    echo "  Look for \"chat\":{\"id\":123456789}"
+    echo ""
+    read -p "Enter your Chat ID (or press Enter to set later): " chat_id
+    TELEGRAM_OWNER_CHAT_ID="${chat_id}"
+    
+    print_success "Identity configured!"
 }
 
 # ═══════════════════════════════════════════════════════════════
@@ -369,51 +425,59 @@ generate_config() {
         n8n_password=$(head /dev/urandom | LC_ALL=C tr -dc A-Za-z0-9 | head -c 32)
     fi
     
+    # Generate encryption key for n8n
+    local n8n_encryption_key
+    if command -v openssl &> /dev/null; then
+        n8n_encryption_key=$(openssl rand -hex 32)
+    else
+        n8n_encryption_key=$(head /dev/urandom | LC_ALL=C tr -dc a-f0-9 | head -c 64)
+    fi
+    
     cat > "$config_file" << EOF
 # ronkbot Configuration File
 # Generated on $(date)
 
-# ═══════════════════════════════════════════════════════════════
-# TELEGRAM BOT CONFIGURATION
-# ═══════════════════════════════════════════════════════════════
+# ─── Telegram ───────────────────────────────────────────────────────────────
 TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
 TELEGRAM_BOT_NAME=$TELEGRAM_BOT_NAME
 TELEGRAM_OWNER_USERNAME=$TELEGRAM_OWNER_USERNAME
+TELEGRAM_OWNER_CHAT_ID=$TELEGRAM_OWNER_CHAT_ID
 
-# ═══════════════════════════════════════════════════════════════
-# GEMINI API CONFIGURATION
-# ═══════════════════════════════════════════════════════════════
-GEMINI_API_KEY=$GEMINI_API_KEY
-GEMINI_MODEL=$GEMINI_MODEL
+# ─── Owner Identity ─────────────────────────────────────────────────────────
+OWNER_NAME=$OWNER_NAME
+OWNER_FIRST_NAME=$OWNER_FIRST_NAME
+OWNER_LAST_NAME=$OWNER_LAST_NAME
 
-# ═══════════════════════════════════════════════════════════════
-# N8N SECURITY
-# ═══════════════════════════════════════════════════════════════
+# ─── n8n ─────────────────────────────────────────────────────────────────────
+N8N_URL=http://localhost:5678
 N8N_BASIC_AUTH_USER=admin
 N8N_BASIC_AUTH_PASSWORD=$n8n_password
-N8N_PORT=5678
+N8N_OWNER_EMAIL=$N8N_OWNER_EMAIL
+N8N_ENCRYPTION_KEY=$n8n_encryption_key
 
-# ═══════════════════════════════════════════════════════════════
-# DATABASE CONFIGURATION
-# ═══════════════════════════════════════════════════════════════
+# ─── Database ────────────────────────────────────────────────────────────────
 DB_TYPE=sqlite
 DB_SQLITE_PATH=/home/node/.n8n/database/ronkbot.db
 
-# ═══════════════════════════════════════════════════════════════
-# BOT PERSONALITY
-# ═══════════════════════════════════════════════════════════════
-BOT_PERSONALITY=conversational_warm
-BOT_NAME=ronkbot
+# ─── Ngrok ───────────────────────────────────────────────────────────────────
+NGROK_URL=$NGROK_URL
+NGROK_DOMAIN=$NGROK_DOMAIN
 
-# ═══════════════════════════════════════════════════════════════
-# SYSTEM ACCESS (SECURITY)
-# ═══════════════════════════════════════════════════════════════
+# ─── AI Providers ───────────────────────────────────────────────────────────
+GEMINI_API_KEY=$GEMINI_API_KEY
+GEMINI_MODEL=$GEMINI_MODEL
+GROQ_API_KEY=
+GITHUB_TOKEN=
+
+# ─── Mac-Agent ──────────────────────────────────────────────────────────────
+MAC_AGENT_HOST=127.0.0.1
+MAC_AGENT_PORT=4242
+
+# ─── System Access (Security) ──────────────────────────────────────────────
 ALLOWED_DIRECTORIES=$HOME/Documents,$HOME/Projects,$HOME/Downloads
 ALLOWED_COMMANDS=df,du,git,ls,cat,ps,top,whoami,pwd,date,cal,echo,head,tail,wc,find,grep
 
-# ═══════════════════════════════════════════════════════════════
-# GMAIL INTEGRATION (OPTIONAL)
-# ═══════════════════════════════════════════════════════════════
+# ─── Gmail Integration (Optional) ──────────────────────────────────────────
 EOF
 
     if [ "$GMAIL_SETUP" == "true" ]; then
@@ -780,6 +844,7 @@ main() {
     # Setup components
     setup_telegram
     setup_gemini
+    setup_ngrok_and_identity
     setup_gmail
     
     # Install

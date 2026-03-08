@@ -1,0 +1,256 @@
+{
+    "name": "10 - Morning Digest",
+    "nodes": [
+        {
+            "id": "trig",
+            "name": "Every Day 8am ET",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                100,
+                300
+            ],
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "0 13 * * *"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "id": "n-owner",
+            "name": "Get Owner",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                320,
+                300
+            ],
+            "parameters": {
+                "method": "GET",
+                "url": "http://host.docker.internal:4242/brain/owner",
+                "options": {
+                    "timeout": 5000
+                }
+            }
+        },
+        {
+            "id": "n-stats",
+            "name": "Brain Stats",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                540,
+                200
+            ],
+            "parameters": {
+                "method": "GET",
+                "url": "=http://host.docker.internal:4242/brain/stats",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "chat_id",
+                            "value": "={{ $('Get Owner').item.json.chat_id }}"
+                        }
+                    ]
+                },
+                "options": {
+                    "response": {
+                        "response": {
+                            "neverError": true
+                        }
+                    },
+                    "timeout": 5000
+                }
+            },
+            "continueOnFail": true
+        },
+        {
+            "id": "n-todos",
+            "name": "Today Todos",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                540,
+                340
+            ],
+            "parameters": {
+                "method": "GET",
+                "url": "http://host.docker.internal:4242/brain/todos",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "chat_id",
+                            "value": "={{ $('Get Owner').item.json.chat_id }}"
+                        },
+                        {
+                            "name": "due_today",
+                            "value": "true"
+                        }
+                    ]
+                },
+                "options": {
+                    "response": {
+                        "response": {
+                            "neverError": true
+                        }
+                    },
+                    "timeout": 5000
+                }
+            },
+            "continueOnFail": true
+        },
+        {
+            "id": "n-disk",
+            "name": "Disk Usage",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                540,
+                480
+            ],
+            "parameters": {
+                "method": "POST",
+                "url": "http://host.docker.internal:4242/execute",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "{\"tool\": \"shell\", \"args\": {\"command\": \"df -h / | tail -1 | awk '{print $5, $4 \\\" free of\\\", $2}'\"}}",
+                "options": {
+                    "response": {
+                        "response": {
+                            "neverError": true
+                        }
+                    },
+                    "timeout": 10000
+                }
+            },
+            "continueOnFail": true
+        },
+        {
+            "id": "n-format",
+            "name": "Format Digest",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                760,
+                340
+            ],
+            "parameters": {
+                "jsCode": "const owner = $('Get Owner').item.json;\nconst stats = $('Brain Stats').item.json || {};\nconst todosData = $('Today Todos').item.json || {};\nconst disk = $('Disk Usage').item.json || {};\n\nconst todos = (todosData.todos || []);\nconst todayStr = new Date().toLocaleDateString('en-US', {weekday:'long', month:'short', day:'numeric'});\n\nlet msg = `🌅 *Good morning, Rohan!* — ${todayStr}\\n\\n`;\n\n// Disk\nif (disk.output) {\n  msg += `💾 *Disk:* ${disk.output.trim()}\\n`;\n}\n\n// Brain\nif (stats.knowledge_facts !== undefined) {\n  msg += `🧠 *Memory:* ${stats.knowledge_facts} facts · ${stats.episode_count} episodes\\n`;\n}\n\n// Todos\nif (todos.length > 0) {\n  msg += `\\n📋 *Today\\'s tasks (${todos.length}):*\\n`;\n  todos.slice(0, 5).forEach(t => {\n    const time = t.due_at ? ` _(${t.due_at.slice(11,16)} UTC)_` : '';\n    msg += `• ${t.task}${time}\\n`;\n  });\n  if (todos.length > 5) msg += `_...and ${todos.length - 5} more_\\n`;\n} else {\n  msg += `\\n✅ No tasks due today. Clean slate!\\n`;\n}\n\nmsg += `\\nHave a great day! 🚀`;\n\nreturn [{ json: { chat_id: owner.chat_id, message: msg } }];"
+            }
+        },
+        {
+            "id": "n-send",
+            "name": "Send Digest",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                980,
+                340
+            ],
+            "parameters": {
+                "chatId": "={{ $json.chat_id }}",
+                "text": "={{ $json.message }}",
+                "additionalFields": {
+                    "parse_mode": "Markdown"
+                }
+            },
+            "credentials": {
+                "telegramApi": {
+                    "id": "",
+                    "name": "Telegram Bot (auto)"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Every Day 8am ET": {
+            "main": [
+                [
+                    {
+                        "node": "Get Owner",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Owner": {
+            "main": [
+                [
+                    {
+                        "node": "Brain Stats",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Today Todos",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Disk Usage",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Brain Stats": {
+            "main": [
+                [
+                    {
+                        "node": "Format Digest",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Today Todos": {
+            "main": [
+                [
+                    {
+                        "node": "Format Digest",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Disk Usage": {
+            "main": [
+                [
+                    {
+                        "node": "Format Digest",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Format Digest": {
+            "main": [
+                [
+                    {
+                        "node": "Send Digest",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "meta": {
+        "description": "Daily morning digest at 8am ET: disk, brain stats, today's todos."
+    }
+}
