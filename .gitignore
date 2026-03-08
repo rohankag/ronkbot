@@ -37,3 +37,6 @@ __pycache__/
 # Backup files
 *.bak
 data-old-backup/
+
+# Legacy/deprecated workflow files
+n8n-workflows/*-legacy.json
