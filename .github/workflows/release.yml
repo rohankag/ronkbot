@@ -89,9 +89,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION="${{ steps.tag.outputs.version }}"
-          SHA256="${{ steps.sha.outputs.sha256 }}"
-          URL="${{ steps.sha.outputs.url }}"
+          export VERSION="${{ steps.tag.outputs.version }}"
+          export SHA256="${{ steps.sha.outputs.sha256 }}"
+          export URL="${{ steps.sha.outputs.url }}"
 
           # Fetch current formula from tap repo
           RESPONSE=$(curl -s -H "Authorization: token $GH_TOKEN" \
