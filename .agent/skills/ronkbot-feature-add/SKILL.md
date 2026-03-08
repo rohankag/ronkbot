@@ -204,13 +204,13 @@ Before committing a new feature:
 - [ ] `README.md` updated
 - [ ] `docs/COMMANDS.md` updated
 - [ ] Setup guide written (if feature needs credentials/OAuth)
-- [ ] `.env.example` updated with any new environment variables
+- [ ] `config.example.env` updated with any new environment variables
 
 ---
 
 ## 6. Environment Variables Convention
 
-When a feature needs new config, add to **`.env.example`** with:
+When a feature needs new config, add to **`config.example.env`** with:
 
 ```bash
 # [Feature Name] (Optional/Required)
@@ -288,6 +288,6 @@ All AI calls are logged locally in Docker container logs with the `[AUDIT]` pref
 | Telegram listener | `n8n-workflows/01-telegram-listener.json` |
 | All tests | `tests/run-tests.sh` |
 | JSON validation | `tests/test-json-valid.sh` |
-| Config template | `.env.example` |
+| Config template | `config.example.env` |
 | Command reference | `docs/COMMANDS.md` |
 | Main readme | `README.md` |

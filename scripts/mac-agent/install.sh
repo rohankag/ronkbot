@@ -21,6 +21,10 @@ echo "  📦 Installing dependencies..."
 
 # 3. Create LaunchAgent plist
 echo "  📝 Creating LaunchAgent: $PLIST_PATH"
+
+# Make the wrapper executable
+chmod +x "$SCRIPT_DIR/launch-agent-wrapper.sh"
+
 cat > "$PLIST_PATH" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -30,8 +34,8 @@ cat > "$PLIST_PATH" << PLIST
     <string>${PLIST_NAME}</string>
     <key>ProgramArguments</key>
     <array>
-        <string>${VENV_DIR}/bin/python3</string>
-        <string>${SCRIPT_DIR}/server.py</string>
+        <string>/bin/bash</string>
+        <string>${SCRIPT_DIR}/launch-agent-wrapper.sh</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
@@ -45,8 +49,6 @@ cat > "$PLIST_PATH" << PLIST
     <dict>
         <key>PATH</key>
         <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
-        <key>MAC_AGENT_PORT</key>
-        <string>4242</string>
     </dict>
 </dict>
 </plist>

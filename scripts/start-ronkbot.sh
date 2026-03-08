@@ -65,7 +65,7 @@ sleep 20
 # 4. Run full setup + activation
 echo "⚙️  Running full n8n setup and activation..."
 python3 << 'PYEOF'
-import requests, json, time, glob
+import requests, json, time, glob, os, re
 
 BASE = "http://localhost:5678"
 s = requests.Session()
@@ -133,7 +133,6 @@ def activate_wf(wf_id):
     return None
 
 # Import 02 - AI Chat (Fallback Chain) — inject real API keys from .env
-import os, re
 
 def load_env(path):
     vals = {}

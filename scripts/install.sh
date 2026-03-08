@@ -38,8 +38,8 @@ echo "${GREEN}✅ Docker found${NC}"
 # Check if .env exists and has been edited
 if [ ! -f .env ]; then
     echo "${RED}❌ .env file not found!${NC}"
-    echo "   Please create it from .env.example:"
-    echo "   cp .env.example .env"
+    echo "   Please create it from config.example.env:"
+    echo "   cp config.example.env .env"
     exit 1
 fi
 
