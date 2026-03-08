@@ -96,7 +96,7 @@
       "credentials": {
         "telegramApi": {
           "id": "telegram-credentials",
-          "name": "ronku_bot"
+          "name": "Telegram Bot (auto)"
         }
       }
     },
@@ -156,7 +156,7 @@
       "credentials": {
         "telegramApi": {
           "id": "telegram-credentials",
-          "name": "ronku_bot"
+          "name": "Telegram Bot (auto)"
         }
       }
     },
@@ -211,7 +211,7 @@
       "credentials": {
         "telegramApi": {
           "id": "telegram-credentials",
-          "name": "ronku_bot"
+          "name": "Telegram Bot (auto)"
         }
       }
     },
@@ -272,7 +272,7 @@
       "credentials": {
         "telegramApi": {
           "id": "telegram-credentials",
-          "name": "ronku_bot"
+          "name": "Telegram Bot (auto)"
         }
       }
     },
@@ -321,7 +321,7 @@
       "credentials": {
         "telegramApi": {
           "id": "telegram-credentials",
-          "name": "ronku_bot"
+          "name": "Telegram Bot (auto)"
         }
       }
     },
@@ -394,7 +394,7 @@
       "credentials": {
         "telegramApi": {
           "id": "telegram-credentials",
-          "name": "ronku_bot"
+          "name": "Telegram Bot (auto)"
         }
       }
     },
@@ -614,7 +614,7 @@
       "credentials": {
         "telegramApi": {
           "id": "telegram-credentials",
-          "name": "ronku_bot"
+          "name": "Telegram Bot (auto)"
         }
       }
     },
@@ -697,7 +697,7 @@
       "credentials": {
         "telegramApi": {
           "id": "telegram-credentials",
-          "name": "ronku_bot"
+          "name": "Telegram Bot (auto)"
         }
       }
     },
@@ -731,7 +731,7 @@
       "credentials": {
         "telegramApi": {
           "id": "telegram-credentials",
-          "name": "ronku_bot"
+          "name": "Telegram Bot (auto)"
         }
       }
     },
@@ -765,7 +765,7 @@
       "credentials": {
         "telegramApi": {
           "id": "telegram-credentials",
-          "name": "ronku_bot"
+          "name": "Telegram Bot (auto)"
         }
       }
     },
@@ -811,7 +811,7 @@
       "credentials": {
         "telegramApi": {
           "id": "telegram-credentials",
-          "name": "ronku_bot"
+          "name": "Telegram Bot (auto)"
         }
       }
     }

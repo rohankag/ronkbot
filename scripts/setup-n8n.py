@@ -38,7 +38,7 @@ def wait_for_n8n():
 def setup_owner(session):
     """Create owner account if not exists."""
     r = session.post(f"{BASE}/rest/owner/setup",
-        json={"email": EMAIL, "firstName": "Rohan", "lastName": "Agarwal", "password": PASSWORD},
+        json={"email": EMAIL, "firstName": os.environ.get("OWNER_FIRST_NAME", "Bot"), "lastName": os.environ.get("OWNER_LAST_NAME", "Owner"), "password": PASSWORD},
         headers={"Content-Type": "application/json"},
         timeout=10
     )
@@ -72,13 +72,13 @@ def create_telegram_credential(session):
     if r.status_code == 200:
         existing = r.json().get("data", [])
         for cred in existing:
-            if cred.get("name") == "ronku_bot":
-                print(f"  Telegram credential 'ronku_bot' already exists (id={cred['id']})")
+            if cred.get("name") == "Telegram Bot (auto)":
+                print(f"  Telegram credential already exists (id={cred['id']})")
                 return cred["id"]
 
     # Create new
     r = session.post(f"{BASE}/rest/credentials",
-        json={"name": "ronku_bot", "type": "telegramApi", 
+        json={"name": "Telegram Bot (auto)", "type": "telegramApi", 
               "data": {"accessToken": TELEGRAM_TOKEN}},
         headers={"Content-Type": "application/json"},
         timeout=10
@@ -126,7 +126,7 @@ def import_workflows(session, tg_cred_id=None):
             for node in wf.get("nodes", []):
                 if "telegram" in node.get("type", "").lower():
                     node.setdefault("credentials", {})["telegramApi"] = {
-                        "id": tg_cred_id, "name": "ronku_bot"}
+                        "id": tg_cred_id, "name": "Telegram Bot (auto)"}
         
         r = session.post(f"{BASE}/rest/workflows", json=wf,
             headers={"Content-Type": "application/json"}, timeout=10)

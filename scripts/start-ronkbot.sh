@@ -101,7 +101,7 @@ s.post(f"{BASE}/rest/login", json={
 
 # Create Telegram credential
 r = s.post(f"{BASE}/rest/credentials", json={
-    "name": "ronku_bot", "type": "telegramApi",
+    "name": "Telegram Bot (auto)", "type": "telegramApi",
     "data": {"accessToken": tg_token}
 }, timeout=10)
 tg_cred_id = (r.json().get("data") or r.json()).get("id")
@@ -172,7 +172,7 @@ for node in wf02.get("nodes", []):
         print(f"AI providers active: {active}")
     # Wire Telegram credential
     if "telegramApi" in node.get("credentials", {}) and tg_cred_id:
-        node["credentials"]["telegramApi"] = {"id": tg_cred_id, "name": "ronku_bot"}
+        node["credentials"]["telegramApi"] = {"id": tg_cred_id, "name": "Telegram Bot (auto)"}
 
 r2 = s.post(f"{BASE}/rest/workflows", json=wf02, timeout=10)
 id_02 = (r2.json().get("data") or r2.json()).get("id")
@@ -229,7 +229,7 @@ for node in wf01.get("nodes", []):
     
     # Wire Telegram credential
     if "telegramTrigger" in t and tg_cred_id:
-        node.setdefault("credentials", {})["telegramApi"] = {"id": tg_cred_id, "name": "ronku_bot"}
+        node.setdefault("credentials", {})["telegramApi"] = {"id": tg_cred_id, "name": "Telegram Bot (auto)"}
 
 r1 = s.post(f"{BASE}/rest/workflows", json=wf01, timeout=10)
 id_01 = (r1.json().get("data") or r1.json()).get("id")
@@ -257,6 +257,6 @@ echo ""
 echo "✅ ronkbot is running!"
 echo "   n8n UI: http://localhost:5678"
 echo "   Tunnel: $NGROK_URL"
-echo "   Bot: @ronku_bot"
+echo "   Bot: @${TELEGRAM_BOT_NAME:-ronkbot}"
 echo ""
-echo "Send /help to @ronku_bot on Telegram to test."
+echo "Send /help to your bot on Telegram to test."

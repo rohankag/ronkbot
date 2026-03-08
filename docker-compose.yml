@@ -32,8 +32,8 @@ services:
       - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
       - N8N_OWNER_EMAIL=${N8N_OWNER_EMAIL}
       - N8N_OWNER_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
-      - N8N_OWNER_FIRST_NAME=Rohan
-      - N8N_OWNER_LAST_NAME=Agarwal
+      - N8N_OWNER_FIRST_NAME=${OWNER_FIRST_NAME:-Bot}
+      - N8N_OWNER_LAST_NAME=${OWNER_LAST_NAME:-Owner}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:

@@ -193,7 +193,7 @@ _owner_chat_id = os.environ.get("TELEGRAM_OWNER_CHAT_ID", "")
 
 DEFAULT_SOUL = {
     "identity": {
-        "name": "ronku_bot",
+        "name": os.environ.get("TELEGRAM_BOT_NAME", "ronkbot"),
         "owner": f"{_owner_name} (@{_owner_username})",
         "telegram_chat_id": _owner_chat_id,
         "telegram_username": _owner_username,
@@ -252,7 +252,7 @@ def soul_to_system_prompt(soul: dict) -> str:
     quirks = s.get("quirks", {})
 
     lines = [
-        f"You are {ident.get('name', 'ronku_bot')}, a personal AI assistant.",
+        f"You are {ident.get('name', 'ronkbot')}, a personal AI assistant.",
         f"Owner: {ident.get('owner', 'unknown')}.",
         "",
         f"Personality: {pers.get('tone', '')}. Humor: {pers.get('humor', '')}.",
@@ -721,7 +721,7 @@ Rules:
 4. After </think>, write your normal response
 
 Examples:
-- <think>Rohan wants to know his disk space. I'll run df -h to check.</think>
+- <think>The user wants to know their disk space. I'll run df -h to check.</think>
 - <think>Simple greeting — no tools needed, just a warm reply.</think>
 - <think>He's asking about his schedule. I should check if there are any TODOs due today using brain_recall.</think>
 
@@ -872,7 +872,8 @@ def bootstrap_memory_md(chat_id: str):
 
     # Owner section from soul
     ctx = soul.get("context", {})
-    content += "## Owner: Rohan\n"
+    owner_name = ctx.get('owner_name', os.environ.get('OWNER_NAME', 'Owner'))
+    content += f"## Owner: {owner_name}\n"
     content += f"- Timezone: {ctx.get('owner_timezone', 'Unknown')}\n"
     content += f"- Location: {ctx.get('owner_location', 'Unknown')}\n"
     content += f"- Machine: {ctx.get('primary_machine', 'Unknown')}\n"
@@ -1024,7 +1025,8 @@ def run_nightly(chat_id: str) -> dict:
         f"{'USER' if r['direction'] == 'inbound' else 'BOT'}: {r['content']}"
         for r in rows
     ])
-    prompt = f"""You are reviewing today's conversations for ronku_bot (a personal AI assistant). Date: {date_str}.
+    bot_name = os.environ.get("TELEGRAM_BOT_NAME", "ronkbot")
+    prompt = f"""You are reviewing today's conversations for {bot_name} (a personal AI assistant). Date: {date_str}.
 
 CONVERSATIONS:
 {convo[:3000]}

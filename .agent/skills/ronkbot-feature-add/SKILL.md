@@ -43,7 +43,7 @@ Never hardcode credentials. Always reference by ID:
 
 ```json
 "credentials": {
-  "telegramApi": { "id": "telegram-credentials", "name": "ronku_bot" },
+  "telegramApi": { "id": "telegram-credentials", "name": "Telegram Bot (auto)" },
   "sqlite": { "id": "ronkbot-db", "name": "ronkbot Database" }
 }
 ```
