@@ -260,6 +260,14 @@ def tool_open_url(args: dict) -> ToolResponse:
     if not url:
         return ToolResponse(success=False, tool="open_url", output="", error="No URL provided")
     
+    # Only allow http/https — block file://, javascript:, data:, etc.
+    from urllib.parse import urlparse
+    scheme = urlparse(url).scheme.lower()
+    if scheme not in ("http", "https"):
+        log.warning("BLOCKED open_url (invalid scheme %r): %s", scheme, url)
+        return ToolResponse(success=False, tool="open_url", output="",
+                            error=f"URL blocked: only http/https schemes are allowed (got '{scheme}')")
+    
     log.info("OPEN url: %s", url)
     try:
         webbrowser.open(url)

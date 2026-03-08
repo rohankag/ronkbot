@@ -404,6 +404,14 @@ def store_fact(chat_id: str, fact: str, category: str = "fact",
             "confidence = MIN(confidence + 0.05, 1.0) WHERE fact_hash = ?",
             (ts, fact_hash)
         )
+        # Keep FTS index in sync — delete old entry, re-insert with updated content
+        try:
+            conn.execute("DELETE FROM knowledge_fts WHERE rowid = ?", (existing["id"],))
+            conn.execute("INSERT INTO knowledge_fts(rowid, fact, key_topic, category) VALUES (?, ?, ?, ?)",
+                        (existing["id"], fact, key_topic, category))
+        except Exception as fts_err:
+            import logging
+            logging.getLogger("brain").warning("FTS update failed for fact %d: %s", existing["id"], fts_err)
         conn.commit()
         return {"status": "updated", "id": existing["id"], "fact": fact}
     else:
