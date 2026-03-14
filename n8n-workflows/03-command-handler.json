@@ -1043,7 +1043,7 @@
           "parameters": [
             {
               "name": "completed",
-              "value": "true"
+              "value": "={{true}}"
             }
           ]
         },
