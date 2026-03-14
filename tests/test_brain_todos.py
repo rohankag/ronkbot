@@ -89,11 +89,114 @@ def test_due_soon_excludes_already_sent():
 
 def test_update_todo_mark_complete():
     t = Brain.create_todo(CHAT, "Complete me")
-    ok = Brain.update_todo(t["id"], completed=True)
-    assert ok is True
+    result = Brain.update_todo(t["id"], completed=True)
+    assert result["ok"] is True
     completed = Brain.get_todos(CHAT, completed=True)
     ids = [x["id"] for x in completed]
     assert t["id"] in ids
+
+
+# ── Recurring todos ───────────────────────────────────────────────────────────
+
+def test_recurrence_daily_creates_next():
+    due = "2026-03-10T09:00:00+00:00"
+    t = Brain.create_todo(CHAT, "Daily standup", due_at=due, recurrence="daily")
+    result = Brain.update_todo(t["id"], completed=True)
+    assert result["ok"] is True
+    nxt = result["next_todo"]
+    assert nxt is not None
+    assert nxt["task"] == "Daily standup"
+    assert nxt["due_at"] == "2026-03-11T09:00:00+00:00"
+    assert nxt["recurrence"] == "daily"
+
+
+def test_recurrence_weekly():
+    due = "2026-03-10T09:00:00+00:00"
+    t = Brain.create_todo(CHAT, "Weekly review", due_at=due, recurrence="weekly")
+    result = Brain.update_todo(t["id"], completed=True)
+    nxt = result["next_todo"]
+    assert nxt["due_at"] == "2026-03-17T09:00:00+00:00"
+
+
+def test_recurrence_monthly_jan31_feb28():
+    due = "2026-01-31T12:00:00+00:00"
+    t = Brain.create_todo(CHAT, "Monthly report", due_at=due, recurrence="monthly")
+    result = Brain.update_todo(t["id"], completed=True)
+    nxt = result["next_todo"]
+    assert nxt["due_at"] == "2026-02-28T12:00:00+00:00"
+
+
+def test_recurrence_monthly_dec_to_jan():
+    due = "2026-12-15T10:00:00+00:00"
+    t = Brain.create_todo(CHAT, "Month-end check", due_at=due, recurrence="monthly")
+    result = Brain.update_todo(t["id"], completed=True)
+    nxt = result["next_todo"]
+    assert nxt["due_at"] == "2027-01-15T10:00:00+00:00"
+
+
+def test_recurrence_monthly_leap_year():
+    due = "2028-01-31T08:00:00+00:00"
+    t = Brain.create_todo(CHAT, "Leap check", due_at=due, recurrence="monthly")
+    result = Brain.update_todo(t["id"], completed=True)
+    nxt = result["next_todo"]
+    assert nxt["due_at"] == "2028-02-29T08:00:00+00:00"
+
+
+def test_recurrence_null_dates():
+    """Recurring todo with no due_at/remind_at still creates next instance."""
+    t = Brain.create_todo(CHAT, "No dates", recurrence="daily")
+    result = Brain.update_todo(t["id"], completed=True)
+    nxt = result["next_todo"]
+    assert nxt is not None
+    assert nxt["task"] == "No dates"
+    assert nxt["due_at"] is None
+    assert nxt["remind_at"] is None
+    assert nxt["recurrence"] == "daily"
+
+
+def test_no_recurrence_no_next():
+    """Non-recurring todo should not create a next instance."""
+    t = Brain.create_todo(CHAT, "One-off task")
+    result = Brain.update_todo(t["id"], completed=True)
+    assert result["ok"] is True
+    assert result["next_todo"] is None
+
+
+def test_recurrence_preserves_remind_offset():
+    """Both due_at and remind_at advance by the same recurrence period."""
+    due = "2026-03-10T09:00:00+00:00"
+    remind = "2026-03-10T08:00:00+00:00"
+    t = Brain.create_todo(CHAT, "Offset test", due_at=due, remind_at=remind, recurrence="weekly")
+    result = Brain.update_todo(t["id"], completed=True)
+    nxt = result["next_todo"]
+    assert nxt["due_at"] == "2026-03-17T09:00:00+00:00"
+    assert nxt["remind_at"] == "2026-03-17T08:00:00+00:00"
+
+
+def test_update_returns_dict():
+    """update_todo now returns a dict, not a bool."""
+    t = Brain.create_todo(CHAT, "Dict check")
+    result = Brain.update_todo(t["id"], task="Updated text")
+    assert isinstance(result, dict)
+    assert result["ok"] is True
+
+
+def test_create_returns_recurrence():
+    """create_todo return dict includes the recurrence field."""
+    t = Brain.create_todo(CHAT, "Recurring", recurrence="weekly")
+    assert "recurrence" in t
+    assert t["recurrence"] == "weekly"
+
+
+def test_recurrence_update_allowed():
+    """Can update the recurrence field on an existing todo."""
+    t = Brain.create_todo(CHAT, "Change recurrence")
+    result = Brain.update_todo(t["id"], recurrence="monthly")
+    assert result["ok"] is True
+    # Verify in DB
+    todos = Brain.get_todos(CHAT, completed=False)
+    match = [x for x in todos if x["id"] == t["id"]]
+    assert match[0]["recurrence"] == "monthly"
 
 
 # ── Alert suppression ──────────────────────────────────────────────────────────

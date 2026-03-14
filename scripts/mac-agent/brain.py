@@ -8,7 +8,7 @@ Five-layer architecture:
   4. Episodic    — Immutable, append-only history (SQLite)
   5. Reflective  — Daily compaction + MEMORY.md summaries
 """
-import os, json, yaml, sqlite3, hashlib, re, threading
+import os, json, yaml, sqlite3, hashlib, re, threading, calendar
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from typing import Optional
@@ -921,6 +921,24 @@ Respond ONLY with a JSON array (empty array if nothing worth storing):
 ]"""
 
 
+# ── Date helpers for recurring todos ──────────────────────────────────────────
+def _advance_date(iso_str: str, recurrence: str) -> str:
+    """Advance an ISO8601 datetime string by one recurrence period.
+    Handles monthly day-clamping (Jan 31 → Feb 28) and year rollover."""
+    dt = datetime.fromisoformat(iso_str)
+    if recurrence == "daily":
+        dt += timedelta(days=1)
+    elif recurrence == "weekly":
+        dt += timedelta(days=7)
+    elif recurrence == "monthly":
+        year = dt.year + (dt.month // 12)
+        month = (dt.month % 12) + 1
+        max_day = calendar.monthrange(year, month)[1]
+        day = min(dt.day, max_day)
+        dt = dt.replace(year=year, month=month, day=day)
+    return dt.isoformat()
+
+
 # ── Todo CRUD ────────────────────────────────────────────────────────────────
 def create_todo(chat_id: str, task: str, due_at: str = None,
                 remind_at: str = None, recurrence: str = None) -> dict:
@@ -933,7 +951,8 @@ def create_todo(chat_id: str, task: str, due_at: str = None,
         (chat_id, task, due_at, remind_at, recurrence, ts)
     )
     conn.commit()
-    return {"id": cursor.lastrowid, "task": task, "due_at": due_at, "remind_at": remind_at}
+    return {"id": cursor.lastrowid, "task": task, "due_at": due_at,
+            "remind_at": remind_at, "recurrence": recurrence}
 
 
 def get_todos(chat_id: str, completed: bool = False,
@@ -958,18 +977,32 @@ def get_todos(chat_id: str, completed: bool = False,
     return [dict(r) for r in rows]
 
 
-def update_todo(todo_id: int, **kwargs) -> bool:
-    """Update specific fields of a todo."""
-    allowed = {"completed", "reminder_sent", "due_at", "remind_at", "task"}
+def update_todo(todo_id: int, **kwargs) -> dict:
+    """Update specific fields of a todo.
+    Returns {"ok": True/False, "next_todo": {...} | None}.
+    When a recurring todo is completed, the next instance is auto-created."""
+    allowed = {"completed", "reminder_sent", "due_at", "remind_at", "task", "recurrence"}
     updates = {k: v for k, v in kwargs.items() if k in allowed}
     if not updates:
-        return False
+        return {"ok": False, "next_todo": None}
     conn = get_db()
     set_clause = ", ".join(f"{k} = ?" for k in updates)
     conn.execute(f"UPDATE todos SET {set_clause} WHERE id = ?",
                  list(updates.values()) + [todo_id])
     conn.commit()
-    return True
+
+    next_todo = None
+    if updates.get("completed"):
+        row = conn.execute("SELECT * FROM todos WHERE id = ?", (todo_id,)).fetchone()
+        if row and row["recurrence"]:
+            rec = row["recurrence"]
+            new_due = _advance_date(row["due_at"], rec) if row["due_at"] else None
+            new_remind = _advance_date(row["remind_at"], rec) if row["remind_at"] else None
+            next_todo = create_todo(
+                row["chat_id"], row["task"],
+                due_at=new_due, remind_at=new_remind, recurrence=rec,
+            )
+    return {"ok": True, "next_todo": next_todo}
 
 
 # ── Alert suppression ────────────────────────────────────────────────────────
