@@ -199,6 +199,12 @@ def test_recurrence_update_allowed():
     assert match[0]["recurrence"] == "monthly"
 
 
+def test_update_nonexistent_todo():
+    """Updating a missing ID returns ok=False."""
+    result = Brain.update_todo(999999, completed=True)
+    assert result["ok"] is False
+
+
 # ── Delete ────────────────────────────────────────────────────────────────────
 
 def test_delete_todo():

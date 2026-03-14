@@ -987,9 +987,11 @@ def update_todo(todo_id: int, **kwargs) -> dict:
         return {"ok": False, "next_todo": None}
     conn = get_db()
     set_clause = ", ".join(f"{k} = ?" for k in updates)
-    conn.execute(f"UPDATE todos SET {set_clause} WHERE id = ?",
-                 list(updates.values()) + [todo_id])
+    cursor = conn.execute(f"UPDATE todos SET {set_clause} WHERE id = ?",
+                          list(updates.values()) + [todo_id])
     conn.commit()
+    if cursor.rowcount == 0:
+        return {"ok": False, "next_todo": None}
 
     next_todo = None
     if updates.get("completed"):
