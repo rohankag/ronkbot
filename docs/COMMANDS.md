@@ -630,7 +630,7 @@ Example:
 **Response:**
 
 ```
-✅ Completed: Buy groceries
+✅ Todo completed!
 
 🔁 Next instance created:
 #15 — Buy groceries
