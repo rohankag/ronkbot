@@ -880,7 +880,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const resp = $input.first().json;\nconst todos = resp.todos || [];\nconst chatId = $('Parse Todo Subcommand').first().json.chatId;\n\nif (todos.length === 0) {\n  return [{ json: { chatId, message: '\\u2705 No active todos! Use `/todo add <task>` to create one.' } }];\n}\n\nlet msg = `\\u2705 *Your Todos (${todos.length})*\\n`;\ntodos.forEach((t, i) => {\n  msg += `\\n${i + 1}. [#${t.id}] ${t.task}`;\n  const parts = [];\n  if (t.due_at) parts.push(`\\ud83d\\udcc5 Due: ${t.due_at.slice(0, 10)}`);\n  if (t.recurrence) parts.push(`\\ud83d\\udd01 ${t.recurrence}`);\n  if (parts.length) msg += `\\n   ${parts.join(' | ')}`;\n});\n\nreturn [{ json: { chatId, message: msg } }];"
+        "jsCode": "const resp = $input.first().json;\nconst todos = resp.todos || [];\nconst chatId = $('Parse Todo Subcommand').first().json.chatId;\n\nif (todos.length === 0) {\n  return [{ json: { chatId, message: '\\u2705 No active todos! Use `/todo add <task>` to create one.' } }];\n}\n\nlet msg = `\\u2705 *Your Todos (${todos.length})*\\n`;\ntodos.forEach((t, i) => {\n  msg += `\\n${i + 1}. [#${t.id}] ${t.task}`;\n  const parts = [];\n  if (t.due_at) parts.push(`\\ud83d\\udcc5 Due: ${t.due_at.slice(0, 10)}`);\n  if (t.recurrence) parts.push(`\\ud83d\\udd01 Recurrence: ${t.recurrence}`);\n  if (parts.length) msg += `\\n   ${parts.join(' | ')}`;\n});\n\nreturn [{ json: { chatId, message: msg } }];"
       },
       "name": "Format Todo List",
       "type": "n8n-nodes-base.code",
@@ -1002,7 +1002,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const resp = $input.first().json;\nconst chatId = $('Parse Todo Add Args').first().json.chatId;\nconst parts = [`\\u2705 *Todo created!*\\n\\n#${resp.id} \\u2014 ${resp.task}`];\nif (resp.due_at) parts.push(`\\ud83d\\udcc5 Due: ${resp.due_at.slice(0, 10)}`);\nif (resp.recurrence) parts.push(`\\ud83d\\udd01 Recurs: ${resp.recurrence}`);\nreturn [{ json: { chatId, message: parts.join('\\n') } }];"
+        "jsCode": "const resp = $input.first().json;\nconst chatId = $('Parse Todo Add Args').first().json.chatId;\nconst parts = [`\\u2705 *Todo created!*\\n\\n#${resp.id} \\u2014 ${resp.task}`];\nif (resp.due_at) parts.push(`\\ud83d\\udcc5 Due: ${resp.due_at.slice(0, 10)}`);\nif (resp.recurrence) parts.push(`\\ud83d\\udd01 Recurrence: ${resp.recurrence}`);\nreturn [{ json: { chatId, message: parts.join('\\n') } }];"
       },
       "name": "Format Todo Created",
       "type": "n8n-nodes-base.code",
@@ -1055,7 +1055,8 @@
       "position": [
         1250,
         1700
-      ]
+      ],
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -1103,7 +1104,8 @@
       "position": [
         1250,
         1800
-      ]
+      ],
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {

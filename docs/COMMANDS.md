@@ -575,7 +575,7 @@ List all active (incomplete) todos. Same as `/todo list`.
 ✅ Your Todos (3)
 
 1. [#12] Buy groceries
-   📅 Due: 2026-03-15 | 🔁 weekly
+   📅 Due: 2026-03-15 | 🔁 Recurrence: weekly
 
 2. [#13] Call dentist
    📅 Due: 2026-03-14
@@ -609,7 +609,7 @@ Examples:
 
 #12 — Buy groceries
 📅 Due: 2026-03-15
-🔁 Recurs: weekly
+🔁 Recurrence: weekly
 ```
 
 ---
