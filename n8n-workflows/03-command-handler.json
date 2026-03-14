@@ -66,6 +66,10 @@
             {
               "value": "system",
               "output": 9
+            },
+            {
+              "value": "todo",
+              "output": 10
             }
           ]
         }
@@ -81,7 +85,7 @@
     {
       "parameters": {
         "chatId": "={{ $json.chatId }}",
-        "text": "👋 Hey there! Here are the things I can help you with:\\n\\n💬 **Chat** - Just message me naturally\\n📊 **/status** - Check your Mac's system status\\n🧠 **/remember [fact]** - I'll remember something for you\\n💭 **/recall** - Show what I remember\\n🗑️ **/clear** - Clear conversation history\\n📁 **/read [filepath]** - Read a text file\\n📂 **/list [directory]** - List directory contents\\n⚡ **/exec [command]** - Run a safe command\\n\\n📧 **Email Commands:**\\n`/email auth` - Connect your Gmail account\\n`/email check` - Check unread emails\\n`/email read [id]` - Read a specific email\\n`/email reply [id]` - AI-powered reply drafts\\n`/email send` - Compose a new email\\n`/email search [query]` - Search your emails\\n\\n🔧 **System Control (owner only):**\\n`/system status` - Check if bot is running\\n`/system restart` - Restart ronkbot\\n`/system stop` - Stop ronkbot\\n`/system wake` - Check power/sleep status\\n\\nJust chat naturally or use any command above! 😊",
+        "text": "👋 Hey there! Here are the things I can help you with:\\n\\n💬 **Chat** - Just message me naturally\\n📊 **/status** - Check your Mac's system status\\n🧠 **/remember [fact]** - I'll remember something for you\\n💭 **/recall** - Show what I remember\\n🗑️ **/clear** - Clear conversation history\\n📁 **/read [filepath]** - Read a text file\\n📂 **/list [directory]** - List directory contents\\n⚡ **/exec [command]** - Run a safe command\\n\\n✅ **Todo Commands:**\\n`/todo` - List your active todos\\n`/todo add <task> [due:DATE] [recur:daily|weekly|monthly]` - Add a todo\\n`/todo done <id>` - Mark a todo complete\\n`/todo delete <id>` - Delete a todo\\n\\n📧 **Email Commands:**\\n`/email auth` - Connect your Gmail account\\n`/email check` - Check unread emails\\n`/email read [id]` - Read a specific email\\n`/email reply [id]` - AI-powered reply drafts\\n`/email send` - Compose a new email\\n`/email search [query]` - Search your emails\\n\\n🔧 **System Control (owner only):**\\n`/system status` - Check if bot is running\\n`/system restart` - Restart ronkbot\\n`/system stop` - Stop ronkbot\\n`/system wake` - Check power/sleep status\\n\\nJust chat naturally or use any command above! 😊",
         "additionalFields": {
           "parse_mode": "Markdown"
         }
@@ -814,6 +818,326 @@
           "name": "Telegram Bot (auto)"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse todo subcommand from args\n// Format: /todo [subcommand] [args...]\n// e.g.  /todo\n//        /todo list\n//        /todo add Buy milk due:2026-03-15 recur:weekly\n//        /todo done 12\n//        /todo delete 12\n\nconst args = $input.first().json.args || '';\nconst parts = args.trim().split(' ');\nconst subcommand = (parts[0] || 'list').toLowerCase();\nconst subArgs = parts.slice(1).join(' ');\n\nreturn [{\n  json: {\n    ...$input.first().json,\n    subcommand: subcommand,\n    subArgs: subArgs\n  }\n}];"
+      },
+      "name": "Parse Todo Subcommand",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        850,
+        1600
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            {
+              "value": "list",
+              "output": 0
+            },
+            {
+              "value": "add",
+              "output": 1
+            },
+            {
+              "value": "done",
+              "output": 2
+            },
+            {
+              "value": "delete",
+              "output": 3
+            }
+          ]
+        },
+        "dataType": "string",
+        "value1": "={{ $json.subcommand }}"
+      },
+      "name": "Route Todo Subcommand",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [
+        1050,
+        1600
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://host.docker.internal:4242/brain/todos?chat_id={{ $json.chatId }}&completed=false",
+        "options": {}
+      },
+      "name": "Fetch Todos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1250,
+        1500
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const resp = $input.first().json;\nconst todos = resp.todos || [];\nconst chatId = $('Parse Todo Subcommand').first().json.chatId;\n\nif (todos.length === 0) {\n  return [{ json: { chatId, message: '\\u2705 No active todos! Use `/todo add <task>` to create one.' } }];\n}\n\nlet msg = `\\u2705 *Your Todos (${todos.length})*\\n`;\ntodos.forEach((t, i) => {\n  msg += `\\n${i + 1}. [#${t.id}] ${t.task}`;\n  const parts = [];\n  if (t.due_at) parts.push(`\\ud83d\\udcc5 Due: ${t.due_at.slice(0, 10)}`);\n  if (t.recurrence) parts.push(`\\ud83d\\udd01 ${t.recurrence}`);\n  if (parts.length) msg += `\\n   ${parts.join(' | ')}`;\n});\n\nreturn [{ json: { chatId, message: msg } }];"
+      },
+      "name": "Format Todo List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1450,
+        1500
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Send Todo List",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        1650,
+        1500
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "Telegram Bot (auto)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse: /todo add Buy milk due:2026-03-15 recur:weekly\nconst raw = $input.first().json.subArgs || '';\nconst chatId = $input.first().json.chatId;\n\n// Extract due:YYYY-MM-DD\nconst dueMatch = raw.match(/due:(\\d{4}-\\d{2}-\\d{2})/);\nconst due_at = dueMatch ? dueMatch[1] + 'T00:00:00+00:00' : null;\n\n// Extract recur:daily|weekly|monthly\nconst recurMatch = raw.match(/recur:(daily|weekly|monthly)/i);\nconst recurrence = recurMatch ? recurMatch[1].toLowerCase() : null;\n\n// Task is everything except due: and recur: tokens\nconst task = raw.replace(/due:\\S+/g, '').replace(/recur:\\S+/gi, '').trim();\n\nif (!task) {\n  return [{ json: { chatId, error: true, message: '\\u26a0\\ufe0f Usage: `/todo add <task> [due:YYYY-MM-DD] [recur:daily|weekly|monthly]`' } }];\n}\n\nreturn [{ json: { chatId, error: false, task, due_at, recurrence } }];"
+      },
+      "name": "Parse Todo Add Args",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1250,
+        1600
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.error }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Todo Add Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1450,
+        1600
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Send Todo Add Error",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        1650,
+        1550
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "Telegram Bot (auto)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:4242/brain/todo",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $json.chatId }}"
+            },
+            {
+              "name": "task",
+              "value": "={{ $json.task }}"
+            },
+            {
+              "name": "due_at",
+              "value": "={{ $json.due_at }}"
+            },
+            {
+              "name": "recurrence",
+              "value": "={{ $json.recurrence }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Create Todo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1650,
+        1650
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const resp = $input.first().json;\nconst chatId = $('Parse Todo Add Args').first().json.chatId;\nconst parts = [`\\u2705 *Todo created!*\\n\\n#${resp.id} \\u2014 ${resp.task}`];\nif (resp.due_at) parts.push(`\\ud83d\\udcc5 Due: ${resp.due_at.slice(0, 10)}`);\nif (resp.recurrence) parts.push(`\\ud83d\\udd01 Recurs: ${resp.recurrence}`);\nreturn [{ json: { chatId, message: parts.join('\\n') } }];"
+      },
+      "name": "Format Todo Created",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1850,
+        1650
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Send Todo Created",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        2050,
+        1650
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "Telegram Bot (auto)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://host.docker.internal:4242/brain/todo/{{ $json.subArgs }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "completed",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Complete Todo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1250,
+        1700
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const resp = $input.first().json;\nconst chatId = $('Parse Todo Subcommand').first().json.chatId;\n\nif (!resp.ok) {\n  return [{ json: { chatId, message: '\\u26a0\\ufe0f Could not complete that todo. Check the ID and try again.' } }];\n}\n\nlet msg = '\\u2705 *Todo completed!*';\nif (resp.next_todo) {\n  const nxt = resp.next_todo;\n  msg += `\\n\\n\\ud83d\\udd01 Next instance created:\\n#${nxt.id} \\u2014 ${nxt.task}`;\n  if (nxt.due_at) msg += `\\n\\ud83d\\udcc5 Due: ${nxt.due_at.slice(0, 10)}`;\n}\n\nreturn [{ json: { chatId, message: msg } }];"
+      },
+      "name": "Format Todo Done",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1450,
+        1700
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Send Todo Done",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        1650,
+        1700
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "Telegram Bot (auto)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=http://host.docker.internal:4242/brain/todo/{{ $json.subArgs }}",
+        "options": {}
+      },
+      "name": "Delete Todo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1250,
+        1800
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const resp = $input.first().json;\nconst chatId = $('Parse Todo Subcommand').first().json.chatId;\nconst todoId = $('Parse Todo Subcommand').first().json.subArgs;\n\nif (resp.ok) {\n  return [{ json: { chatId, message: `\\ud83d\\uddd1\\ufe0f Todo #${todoId} deleted.` } }];\n}\nreturn [{ json: { chatId, message: '\\u26a0\\ufe0f Todo not found. Check the ID and try again.' } }];"
+      },
+      "name": "Format Todo Deleted",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1450,
+        1800
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Send Todo Deleted",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        1650,
+        1800
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "Telegram Bot (auto)"
+        }
+      }
     }
   ],
   "connections": {
@@ -894,6 +1218,13 @@
         [
           {
             "node": "System Owner Check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parse Todo Subcommand",
             "type": "main",
             "index": 0
           }
@@ -1144,6 +1475,166 @@
         [
           {
             "node": "Send Wake Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Todo Subcommand": {
+      "main": [
+        [
+          {
+            "node": "Route Todo Subcommand",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Todo Subcommand": {
+      "main": [
+        [
+          {
+            "node": "Fetch Todos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parse Todo Add Args",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Complete Todo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete Todo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Todos": {
+      "main": [
+        [
+          {
+            "node": "Format Todo List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Todo List": {
+      "main": [
+        [
+          {
+            "node": "Send Todo List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Todo Add Args": {
+      "main": [
+        [
+          {
+            "node": "Todo Add Error?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Todo Add Error?": {
+      "main": [
+        [
+          {
+            "node": "Send Todo Add Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Todo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Todo": {
+      "main": [
+        [
+          {
+            "node": "Format Todo Created",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Todo Created": {
+      "main": [
+        [
+          {
+            "node": "Send Todo Created",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Complete Todo": {
+      "main": [
+        [
+          {
+            "node": "Format Todo Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Todo Done": {
+      "main": [
+        [
+          {
+            "node": "Send Todo Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Todo": {
+      "main": [
+        [
+          {
+            "node": "Format Todo Deleted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Todo Deleted": {
+      "main": [
+        [
+          {
+            "node": "Send Todo Deleted",
             "type": "main",
             "index": 0
           }

@@ -1005,6 +1005,14 @@ def update_todo(todo_id: int, **kwargs) -> dict:
     return {"ok": True, "next_todo": next_todo}
 
 
+def delete_todo(todo_id: int) -> bool:
+    """Delete a todo by ID. Returns True if a row was deleted."""
+    conn = get_db()
+    cursor = conn.execute("DELETE FROM todos WHERE id = ?", (todo_id,))
+    conn.commit()
+    return cursor.rowcount > 0
+
+
 # ── Alert suppression ────────────────────────────────────────────────────────
 def should_alert(alert_type: str) -> bool:
     """Return True if enough time has passed since last alert of this type."""

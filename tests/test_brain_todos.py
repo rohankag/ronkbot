@@ -199,6 +199,28 @@ def test_recurrence_update_allowed():
     assert match[0]["recurrence"] == "monthly"
 
 
+# ── Delete ────────────────────────────────────────────────────────────────────
+
+def test_delete_todo():
+    """Deleting an existing todo returns True."""
+    t = Brain.create_todo(CHAT, "Delete me")
+    assert Brain.delete_todo(t["id"]) is True
+
+
+def test_delete_nonexistent_todo():
+    """Deleting a missing ID returns False."""
+    assert Brain.delete_todo(999999) is False
+
+
+def test_delete_removes_from_list():
+    """Deleted todo doesn't appear in get_todos."""
+    t = Brain.create_todo(CHAT, "Vanish task")
+    Brain.delete_todo(t["id"])
+    todos = Brain.get_todos(CHAT, completed=False)
+    ids = [x["id"] for x in todos]
+    assert t["id"] not in ids
+
+
 # ── Alert suppression ──────────────────────────────────────────────────────────
 
 def test_alert_first_time_should_fire():

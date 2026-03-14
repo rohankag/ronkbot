@@ -723,6 +723,14 @@ async def update_todo(todo_id: int, req: TodoUpdateRequest):
     result = Brain.update_todo(todo_id, **updates)
     return result
 
+@app.delete("/brain/todo/{todo_id}")
+async def delete_todo(todo_id: int):
+    """Delete a todo by ID."""
+    ok = Brain.delete_todo(todo_id)
+    if not ok:
+        raise HTTPException(404, "Todo not found")
+    return {"ok": True}
+
 
 # ── Alert suppression ────────────────────────────────────────────────────────
 @app.get("/brain/alert-check")
