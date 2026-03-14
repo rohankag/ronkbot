@@ -914,7 +914,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse: /todo add Buy milk due:2026-03-15 recur:weekly\nconst raw = $input.first().json.subArgs || '';\nconst chatId = $input.first().json.chatId;\n\n// Extract due:YYYY-MM-DD\nconst dueMatch = raw.match(/due:(\\d{4}-\\d{2}-\\d{2})/);\nconst due_at = dueMatch ? dueMatch[1] + 'T00:00:00+00:00' : null;\n\n// Extract recur:daily|weekly|monthly\nconst recurMatch = raw.match(/recur:(daily|weekly|monthly)/i);\nconst recurrence = recurMatch ? recurMatch[1].toLowerCase() : null;\n\n// Task is everything except due: and recur: tokens\nconst task = raw.replace(/due:\\S+/g, '').replace(/recur:\\S+/gi, '').trim();\n\nif (!task) {\n  return [{ json: { chatId, error: true, message: '\\u26a0\\ufe0f Usage: `/todo add <task> [due:YYYY-MM-DD] [recur:daily|weekly|monthly]`' } }];\n}\n\nreturn [{ json: { chatId, error: false, task, due_at, recurrence } }];"
+        "jsCode": "// Parse: /todo add Buy milk due:2026-03-15 recur:weekly\nconst raw = $input.first().json.subArgs || '';\nconst chatId = $input.first().json.chatId;\nconst parts = raw.split(' ');\n\nlet due_at = null;\nlet recurrence = null;\nconst taskParts = [];\n\nfor (const part of parts) {\n  const dueMatch = part.match(/^due:(\\d{4}-\\d{2}-\\d{2})$/);\n  if (dueMatch) {\n    due_at = dueMatch[1] + 'T00:00:00+00:00';\n    continue;\n  }\n  const recurMatch = part.match(/^recur:(daily|weekly|monthly)$/i);\n  if (recurMatch) {\n    recurrence = recurMatch[1].toLowerCase();\n    continue;\n  }\n  taskParts.push(part);\n}\n\nconst task = taskParts.join(' ').trim();\n\nif (!task) {\n  return [{ json: { chatId, error: true, message: '\\u26a0\\ufe0f Usage: `/todo add <task> [due:YYYY-MM-DD] [recur:daily|weekly|monthly]`' } }];\n}\n\nreturn [{ json: { chatId, error: false, task, due_at, recurrence } }];"
       },
       "name": "Parse Todo Add Args",
       "type": "n8n-nodes-base.code",
@@ -1047,7 +1047,11 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "response": {
+            "neverError": true
+          }
+        }
       },
       "name": "Complete Todo",
       "type": "n8n-nodes-base.httpRequest",
@@ -1055,8 +1059,7 @@
       "position": [
         1250,
         1700
-      ],
-      "onError": "continueRegularOutput"
+      ]
     },
     {
       "parameters": {
@@ -1096,7 +1099,11 @@
       "parameters": {
         "method": "DELETE",
         "url": "=http://host.docker.internal:4242/brain/todo/{{ $json.subArgs }}",
-        "options": {}
+        "options": {
+          "response": {
+            "neverError": true
+          }
+        }
       },
       "name": "Delete Todo",
       "type": "n8n-nodes-base.httpRequest",
@@ -1104,8 +1111,7 @@
       "position": [
         1250,
         1800
-      ],
-      "onError": "continueRegularOutput"
+      ]
     },
     {
       "parameters": {
