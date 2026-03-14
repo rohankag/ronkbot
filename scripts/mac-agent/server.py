@@ -697,6 +697,7 @@ class TodoUpdateRequest(BaseModel):
     task: Optional[str] = None
     due_at: Optional[str] = None
     remind_at: Optional[str] = None
+    recurrence: Optional[str] = None
 
 @app.post("/brain/todo")
 async def create_todo(req: TodoCreateRequest):
@@ -719,8 +720,8 @@ async def get_todos(chat_id: str, completed: bool = False,
 async def update_todo(todo_id: int, req: TodoUpdateRequest):
     """Update a todo (mark complete, mark reminder sent, etc)."""
     updates = req.dict(exclude_none=True)
-    ok = Brain.update_todo(todo_id, **updates)
-    return {"ok": ok}
+    result = Brain.update_todo(todo_id, **updates)
+    return result
 
 
 # ── Alert suppression ────────────────────────────────────────────────────────
