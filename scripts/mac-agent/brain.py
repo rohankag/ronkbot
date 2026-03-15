@@ -987,9 +987,11 @@ def update_todo(todo_id: int, **kwargs) -> dict:
         return {"ok": False, "next_todo": None}
     conn = get_db()
     set_clause = ", ".join(f"{k} = ?" for k in updates)
-    conn.execute(f"UPDATE todos SET {set_clause} WHERE id = ?",
-                 list(updates.values()) + [todo_id])
+    cursor = conn.execute(f"UPDATE todos SET {set_clause} WHERE id = ?",
+                          list(updates.values()) + [todo_id])
     conn.commit()
+    if cursor.rowcount == 0:
+        return {"ok": False, "next_todo": None}
 
     next_todo = None
     if updates.get("completed"):
@@ -1003,6 +1005,14 @@ def update_todo(todo_id: int, **kwargs) -> dict:
                 due_at=new_due, remind_at=new_remind, recurrence=rec,
             )
     return {"ok": True, "next_todo": next_todo}
+
+
+def delete_todo(todo_id: int) -> bool:
+    """Delete a todo by ID. Returns True if a row was deleted."""
+    conn = get_db()
+    cursor = conn.execute("DELETE FROM todos WHERE id = ?", (todo_id,))
+    conn.commit()
+    return cursor.rowcount > 0
 
 
 # ── Alert suppression ────────────────────────────────────────────────────────
