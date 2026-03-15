@@ -1063,7 +1063,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const resp = $input.first().json;\nconst chatId = $('Parse Todo Subcommand').first().json.chatId;\n\nif (!resp.ok) {\n  return [{ json: { chatId, message: '\\u26a0\\ufe0f Could not complete that todo. Check the ID and try again.' } }];\n}\n\nlet msg = '\\u2705 *Todo completed!*';\nif (resp.next_todo) {\n  const nxt = resp.next_todo;\n  msg += `\\n\\n\\ud83d\\udd01 Next instance created:\\n#${nxt.id} \\u2014 ${nxt.task}`;\n  if (nxt.due_at) msg += `\\n\\ud83d\\udcc5 Due: ${nxt.due_at.slice(0, 10)}`;\n}\n\nreturn [{ json: { chatId, message: msg } }];"
+        "jsCode": "const input = $input.first().json;\nconst chatId = $('Parse Todo Subcommand').first().json.chatId;\n\nif (input.statusCode && input.statusCode >= 400) {\n  return [{ json: { chatId, message: '\\u26a0\\ufe0f Could not complete that todo. Check the ID and try again.' } }];\n}\n\nconst resp = input;\nlet msg = '\\u2705 *Todo completed!*';\nif (resp.next_todo) {\n  const nxt = resp.next_todo;\n  msg += `\\n\\n\\ud83d\\udd01 Next instance created:\\n#${nxt.id} \\u2014 ${nxt.task}`;\n  if (nxt.due_at) msg += `\\n\\ud83d\\udcc5 Due: ${nxt.due_at.slice(0, 10)}`;\n}\n\nreturn [{ json: { chatId, message: msg } }];"
       },
       "name": "Format Todo Done",
       "type": "n8n-nodes-base.code",
@@ -1115,7 +1115,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const resp = $input.first().json;\nconst chatId = $('Parse Todo Subcommand').first().json.chatId;\nconst todoId = $('Parse Todo Subcommand').first().json.subArgs;\n\nif (resp.ok) {\n  return [{ json: { chatId, message: `\\ud83d\\uddd1\\ufe0f Todo #${todoId} deleted.` } }];\n}\nreturn [{ json: { chatId, message: '\\u26a0\\ufe0f Todo not found. Check the ID and try again.' } }];"
+        "jsCode": "const input = $input.first().json;\nconst chatId = $('Parse Todo Subcommand').first().json.chatId;\nconst todoId = $('Parse Todo Subcommand').first().json.subArgs;\n\nif (input.statusCode && input.statusCode >= 400) {\n  return [{ json: { chatId, message: '\\u26a0\\ufe0f Todo not found. Check the ID and try again.' } }];\n}\n\nreturn [{ json: { chatId, message: `\\ud83d\\uddd1\\ufe0f Todo #${todoId} deleted.` } }];"
       },
       "name": "Format Todo Deleted",
       "type": "n8n-nodes-base.code",
