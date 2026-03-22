@@ -552,6 +552,116 @@ Analyze your writing style from sent emails. Used to personalize AI replies.
 
 ---
 
+## ✅ /todo — Task Management
+
+Manage your todo list directly from Telegram.
+
+---
+
+### /todo
+
+List all active (incomplete) todos. Same as `/todo list`.
+
+**Usage:**
+
+```
+/todo
+/todo list
+```
+
+**Example Response:**
+
+```
+✅ Your Todos (3)
+
+1. [#12] Buy groceries
+   📅 Due: 2026-03-15 | 🔁 Recurrence: weekly
+
+2. [#13] Call dentist
+   📅 Due: 2026-03-14
+
+3. [#14] Daily standup
+   🔁 daily
+```
+
+---
+
+### /todo add
+
+Create a new todo. Optionally set a due date and recurrence.
+
+**Usage:**
+
+```
+/todo add <task> [due:YYYY-MM-DD] [recur:daily|weekly|monthly]
+
+Examples:
+/todo add Buy groceries due:2026-03-15 recur:weekly
+/todo add Call dentist due:2026-03-14
+/todo add Morning meditation recur:daily
+/todo add Fix the sink
+```
+
+**Response:**
+
+```
+✅ Todo created!
+
+#12 — Buy groceries
+📅 Due: 2026-03-15
+🔁 Recurrence: weekly
+```
+
+---
+
+### /todo done
+
+Mark a todo as completed by its ID number.
+
+**Usage:**
+
+```
+/todo done <id>
+
+Example:
+/todo done 12
+```
+
+**Response:**
+
+```
+✅ Todo completed!
+
+🔁 Next instance created:
+#15 — Buy groceries
+📅 Due: 2026-03-22
+```
+
+If the todo is recurring, the next instance is automatically created.
+
+---
+
+### /todo delete
+
+Permanently remove a todo by its ID number.
+
+**Usage:**
+
+```
+/todo delete <id>
+
+Example:
+/todo delete 12
+```
+
+**Response:**
+
+```
+🗑️ Todo #12 deleted.
+```
+
+---
+
 ## 🔧 /system — Remote Control (Owner Only)
 
 Control the ronkbot container directly from Telegram. All subcommands are restricted to the owner only (`TELEGRAM_OWNER_USERNAME`).
